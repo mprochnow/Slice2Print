@@ -20,6 +20,7 @@ import wx
 import glview
 import icons
 import model
+import settingsdialog
 
 
 class MainFrame(wx.Frame):
@@ -29,14 +30,15 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, None, title="Slice2Print", size=(800, 600))
         self.toolbar = self.CreateToolBar()
         self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder.GetBitmap(), shortHelp="Open")
-        # self.toolbar.AddStretchableSpace()
-        # self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.wrench_orange.GetBitmap(), shortHelp="Settings")
+        self.toolbar.AddSeparator()
+        self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.wrench_orange.GetBitmap(), shortHelp="Settings")
         self.toolbar.Realize()
 
         self.canvas = glview.GlCanvas(self)
 
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
 
         self.SetAcceleratorTable(
             wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT),
@@ -58,6 +60,11 @@ class MainFrame(wx.Frame):
 
                 except (AssertionError, ValueError) as e:
                     msg = "Error in line %s of %s: %s" % (parser.ln_no, parser.filename, e)
+
+    def on_settings(self, event):
+        with settingsdialog.SettingsDialogA(self) as dialog:
+            if dialog.ShowModal() != wx.ID_CANCEL:
+                print(dialog.get_build_volume())
 
 
 if __name__ == "__main__":
