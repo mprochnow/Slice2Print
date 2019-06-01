@@ -16,7 +16,7 @@
 from glhelpers import *
 
 
-VERTEX_SHADER = """
+MODEL_VERTEX_SHADER = """
     #version 150
 
     in vec3 vertex_normal;
@@ -41,7 +41,7 @@ VERTEX_SHADER = """
     }
     """
 
-FRAGMENT_SHADER = """
+MODEL_FRAGMENT_SHADER = """
     #version 150
 
     in vec3 color;
@@ -53,7 +53,7 @@ FRAGMENT_SHADER = """
     """
 
 
-class Mesh:
+class ModelMesh:
     def __init__(self, shader_program, vertices, normals, indices, bounding_box):
         self.program = shader_program
 
@@ -75,18 +75,18 @@ class Mesh:
         vertex_position_index = self.program.get_attrib_location("vertex_position")
         vertex_normal_index = self.program.get_attrib_location("vertex_normal")
 
-        self.vbo_vertices = VertexBuffer(vertices)
-        self.vbo_normals = VertexBuffer(normals)
-        self.vbo_indices = VertexBuffer(indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
+        self.vertices = GlBuffer(vertices)
+        self.normals = GlBuffer(normals)
+        self.indices = GlBuffer(indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
 
-        with self.vbo_vertices:
+        with self.vertices:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_position_index)
 
-        with self.vbo_normals:
+        with self.normals:
             glVertexAttribPointer(vertex_normal_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_normal_index)
 
@@ -108,5 +108,5 @@ class Mesh:
 
             glBindVertexArray(self.vao)
 
-            with self.vbo_indices:
-                glDrawElements(GL_TRIANGLES, len(self.vbo_indices), GL_UNSIGNED_INT, None)
+            with self.indices:
+                glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, None)

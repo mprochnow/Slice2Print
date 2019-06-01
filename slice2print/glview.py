@@ -125,7 +125,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         wx.glcanvas.GLCanvas.__init__(self, parent, attribList=attributes)
         self.context = wx.glcanvas.GLContext(self)
         self.initialized = False
-        self.mesh = None
+        self.model_mesh = None
         self.camera = Camera()
 
         self.mouse_x = 0
@@ -144,8 +144,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
 
     def create_mesh(self, vertices, normals, indices, bounding_box):
-        shader_program = glhelpers.ShaderProgram(glmesh.VERTEX_SHADER, glmesh.FRAGMENT_SHADER)
-        self.mesh = glmesh.Mesh(shader_program, vertices, normals, indices, bounding_box)
+        shader_program = glhelpers.ShaderProgram(glmesh.MODEL_VERTEX_SHADER, glmesh.MODEL_FRAGMENT_SHADER)
+        self.model_mesh = glmesh.ModelMesh(shader_program, vertices, normals, indices, bounding_box)
 
         self.camera.reset()
         size = self.GetClientSize()
@@ -158,10 +158,10 @@ class GlCanvas(wx.glcanvas.GLCanvas):
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        if self.mesh:
-            self.mesh.update_projection_matrix(self.camera.get_projection_matrix())
-            self.mesh.update_view_matrix(self.camera.get_view_matrix())
-            self.mesh.draw()
+        if self.model_mesh:
+            self.model_mesh.update_projection_matrix(self.camera.get_projection_matrix())
+            self.model_mesh.update_view_matrix(self.camera.get_view_matrix())
+            self.model_mesh.draw()
 
         self.SwapBuffers()
 

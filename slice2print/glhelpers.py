@@ -125,7 +125,7 @@ class ShaderProgram:
         glUseProgram(0)
 
 
-class VertexBuffer:
+class GlBuffer:
     def __init__(self, data, dtype=numpy.float32, target=GL_ARRAY_BUFFER):
         self.target = target
         self.data = numpy.array(data, dtype)
