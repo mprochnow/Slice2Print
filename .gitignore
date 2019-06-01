@@ -1,0 +1,4 @@
+*.stl
+*.pyc
+.idea
+__pycache__
