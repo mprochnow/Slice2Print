@@ -17,7 +17,7 @@ import wx
 import wx.lib.masked.numctrl
 
 
-class SettingsDialogA(wx.Dialog):
+class SettingsDialog(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, -1, title="Settings", size=wx.DefaultSize)
 
@@ -73,6 +73,6 @@ class SettingsDialogA(wx.Dialog):
 if __name__ == "__main__":
     app = wx.App()
 
-    d = SettingsDialogA(None)
+    d = SettingsDialog(None)
     d.ShowModal()
 

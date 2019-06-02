@@ -67,10 +67,10 @@ class MainFrame(wx.Frame):
                     self.canvas.create_mesh(vertices, normals, indices, bb)
 
                 except (AssertionError, ValueError) as e:
-                    msg = "Error in line %s of %s: %s" % (parser.ln_no, parser.filename, e)
+                    msg = "Error in line %s of %s: %s" % (parser.line_no, parser.filename, e)
 
     def on_settings(self, event):
-        with settingsdialog.SettingsDialogA(self) as dialog:
+        with settingsdialog.SettingsDialog(self) as dialog:
             dialog.set_build_volume(self.settings.build_volume)
 
             if dialog.ShowModal() != wx.ID_CANCEL:

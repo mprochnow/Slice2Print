@@ -32,6 +32,9 @@ ProjectionType = enum.Enum("ProjectionType", "PERSPECTIVE ORTHOGRAPHIC")
 
 
 class Camera:
+    DEFAULT_YAW = 25.0
+    DEFAULT_PITCH = 25.0
+
     def __init__(self, fov_y=22.5, projection_type=ProjectionType.ORTHOGRAPHIC):
         self.fov_y = fov_y
         self.projection_type = projection_type
@@ -43,16 +46,16 @@ class Camera:
         self.pos_y = 0.0
         self.camera_distance = 140.0
 
-        self.yaw = 25.0
-        self.pitch = 25.0
+        self.yaw = self.DEFAULT_YAW
+        self.pitch = self.DEFAULT_PITCH
 
     def reset(self):
         self.pos_x = 0.0
         self.pos_y = 0.0
         self.camera_distance = 140.0
 
-        self.yaw = 25.0
-        self.pitch = 25.0
+        self.yaw = self.DEFAULT_YAW
+        self.pitch = self.DEFAULT_PITCH
 
     def move_x(self, x):
         self.pos_x += x
@@ -99,7 +102,11 @@ class Camera:
 
         return numpy.dot(self._get_rotation_matrix(), translation_matrix)
 
-    def zoom_to_fit(self, bb):
+    def view_all(self, bb):
+        """
+        Moves the camera to a position where to complete model is within the viewport.
+        :param bb: Instance of model.BoundingBox
+        """
         # Center camera vertical to mesh
         # The mesh's z position is already set to 0 via its model matrix, so we use the absolute value here
         self.pos_y = -abs((bb.z_min + bb.z_max) / 2)
@@ -135,11 +142,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
         self.Bind(wx.EVT_LEFT_DOWN, self.on_left_down)
-        self.Bind(wx.EVT_LEFT_UP, self.on_left_up)
         self.Bind(wx.EVT_RIGHT_DOWN, self.on_right_down)
-        self.Bind(wx.EVT_RIGHT_UP, self.on_right_up)
         self.Bind(wx.EVT_ENTER_WINDOW, self.on_enter_window)
-        self.Bind(wx.EVT_LEAVE_WINDOW, self.on_leave_window)
         self.Bind(wx.EVT_MOTION, self.on_motion)
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
 
@@ -148,8 +152,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.model_mesh = glmesh.ModelMesh(shader_program, vertices, normals, indices, bounding_box)
 
         self.camera.reset()
-        size = self.GetClientSize()
-        self.camera.zoom_to_fit(bounding_box)
+        self.camera.view_all(bounding_box)
 
         self.Refresh()
 
@@ -186,18 +189,9 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.mouse_x = event.GetX()
         self.mouse_y = event.GetY()
 
-    def on_left_up(self, event):
-        pass
-
     def on_right_down(self, event):
         self.mouse_x = event.GetX()
         self.mouse_y = event.GetY()
-
-    def on_right_up(self, event):
-        pass
-
-    def on_leave_window(self, event):
-        pass
 
     def on_enter_window(self, event):
         self.mouse_x = event.GetX()

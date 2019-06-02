@@ -25,6 +25,9 @@ class BoundingBox:
         self.x_max = self.y_max = self.z_max = -float("inf")
 
     def update(self, vertex):
+        """
+        :param vertex: Used to update min and max values for the x, y and z axis
+        """
         self.x_min = min(vertex[0], self.x_min)
         self.x_max = max(vertex[0], self.x_max)
         self.y_min = min(vertex[1], self.y_min)
@@ -33,11 +36,17 @@ class BoundingBox:
         self.z_max = max(vertex[2], self.z_max)
 
     def center(self):
+        """
+        :return: Vector to the center of the bounding box
+        """
         return numpy.array([(self.x_max-self.x_min)/2,
                             (self.y_max-self.y_min)/2,
                             (self.z_max-self.z_min)/2])
 
     def diagonal(self):
+        """
+        :return: Vector for the diagonal of the bounding box
+        """
         return numpy.subtract(numpy.array([self.x_min, self.y_min, self.z_min]),
                               numpy.array([self.x_max, self.y_max, self.z_max]))
 
@@ -72,7 +81,7 @@ class StlParserError(RuntimeError):
 class StlAsciiFileParser:
     def __init__(self, filename):
         self.filename = filename
-        self.ln_no = 1
+        self.line_no = 1
         self.parser_state = StlParserState.START
 
         self.normal = None
@@ -93,6 +102,11 @@ class StlAsciiFileParser:
         return float(data[0]), float(data[1]), float(data[2])
 
     def parse(self):
+        """
+        :return: Tuple (vertices, normals, indices, bounding box)
+        :raises AssertionError: Thrown when something mismatches the STL ASCII format
+        :raises ValueError: Thrown when vertices or normals cannot be parsed
+        """
         states = {StlParserState.START: self._do_start,
                   StlParserState.SOLID: self._do_solid,
                   StlParserState.ENDFACET: self._do_solid,
@@ -110,65 +124,65 @@ class StlAsciiFileParser:
                 if not states[self.parser_state](ln):
                     break
 
-                self.ln_no += 1
+                self.line_no += 1
 
             return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
                 numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
                 numpy.array(self.indices, numpy.uint32), self.bb
 
-    def _do_start(self, ln):
-        assert ln.startswith("solid"), "Expected keyword 'solid'"
+    def _do_start(self, line):
+        assert line.startswith("solid"), "Expected keyword 'solid'"
         self.parser_state = StlParserState.SOLID
 
         return True
 
-    def _do_solid(self, ln):
-        assert ln.startswith("facet normal") or ln.startswith("endsolid"), "Expected keyword 'facet normal'"
+    def _do_solid(self, line):
+        assert line.startswith("facet normal") or line.startswith("endsolid"), "Expected keyword 'facet normal'"
 
-        if ln.startswith("facet normal"):
+        if line.startswith("facet normal"):
             self.parser_state = StlParserState.FACET_NORMAL
 
-            data = ln.split(" ")[2:]
+            data = line.split(" ")[2:]
             assert len(data) == 3, "Normal requires 3 elements"
             self.normal = float(data[0]), float(data[1]), float(data[2])
 
             return True
 
-        if ln.startswith("endsolid"):
+        if line.startswith("endsolid"):
             return False
 
-    def _do_facet_normal(self, ln):
-        assert ln == "outer loop", "Expected keyword 'outer loop'"
+    def _do_facet_normal(self, line):
+        assert line == "outer loop", "Expected keyword 'outer loop'"
         self.parser_state = StlParserState.OUTER_LOOP
 
         return True
 
-    def _do_outer_loop(self, ln):
-        assert ln.startswith("vertex"), "Expected keyword 'vertex'"
+    def _do_outer_loop(self, line):
+        assert line.startswith("vertex"), "Expected keyword 'vertex'"
 
         self.parser_state = StlParserState.VERTEX1
-        self.vertex1 = self._parse_vertex(ln)
+        self.vertex1 = self._parse_vertex(line)
 
         return True
 
-    def _do_vertex1(self, ln):
-        assert ln.startswith("vertex"), "Expected keyword 'vertex'"
+    def _do_vertex1(self, line):
+        assert line.startswith("vertex"), "Expected keyword 'vertex'"
 
         self.parser_state = StlParserState.VERTEX2
-        self.vertex2 = self._parse_vertex(ln)
+        self.vertex2 = self._parse_vertex(line)
 
         return True
 
-    def _do_vertex2(self, ln):
-        assert ln.startswith("vertex"), "Expected keyword 'vertex'"
+    def _do_vertex2(self, line):
+        assert line.startswith("vertex"), "Expected keyword 'vertex'"
 
         self.parser_state = StlParserState.VERTEX3
-        self.vertex3 = self._parse_vertex(ln)
+        self.vertex3 = self._parse_vertex(line)
 
         return True
 
-    def _do_vertex3(self, ln):
-        assert ln == "endloop", "Expected keyword 'endloop'"
+    def _do_vertex3(self, line):
+        assert line == "endloop", "Expected keyword 'endloop'"
 
         self.parser_state = StlParserState.ENDLOOP
 
@@ -182,16 +196,16 @@ class StlAsciiFileParser:
 
         return True
 
-    def _add_vertex(self, v, n):
+    def _add_vertex(self, vertex, normal):
         try:
-            self.indices.append(self.vertices[(v, n)])
+            self.indices.append(self.vertices[(vertex, normal)])
         except KeyError:
-            self.vertices[(v, n)] = self.index
+            self.vertices[(vertex, normal)] = self.index
             self.indices.append(self.index)
             self.index += 1
 
-    def _do_endloop(self, ln):
-        assert ln == "endfacet", "Expected keyword 'endfacet'"
+    def _do_endloop(self, line):
+        assert line == "endfacet", "Expected keyword 'endfacet'"
         self.parser_state = StlParserState.ENDFACET
 
         return True

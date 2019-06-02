@@ -55,6 +55,13 @@ MODEL_FRAGMENT_SHADER = """
 
 class ModelMesh:
     def __init__(self, shader_program, vertices, normals, indices, bounding_box):
+        """
+        :param shader_program: Instance of glhelpers.ShaderProgram
+        :param vertices: numpy.array() containing the vertices
+        :param normals: numpy.array() containing the normals
+        :param indices:  numpy.array() containing the indices
+        :param bounding_box:  Instance of model.BoundingBox
+        """
         self.program = shader_program
 
         self.model_matrix = numpy.identity(4, numpy.float32)
