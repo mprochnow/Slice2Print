@@ -31,7 +31,8 @@ class MainFrame(wx.Frame):
         self.settings = settings.Settings()
         self.settings.load_from_file()
 
-        wx.Frame.__init__(self, None, title="Slice2Print", size=(800, 600))
+        wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
+
         self.toolbar = self.CreateToolBar()
         self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder.GetBitmap(), shortHelp="Open")
         self.toolbar.AddSeparator()
@@ -43,11 +44,15 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
         self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
+        self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
         self.SetAcceleratorTable(
             wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT),
                                  wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("O"), self.tool_open.GetId())]))
+
+        self.Layout()
+        self.Maximize(self.settings.app_window_maximized)
 
     def on_exit(self, event):
         self.Close()
@@ -71,13 +76,26 @@ class MainFrame(wx.Frame):
             if dialog.ShowModal() != wx.ID_CANCEL:
                 self.settings.build_volume = dialog.get_build_volume()
 
+    def on_size(self, event):
+        if self.IsMaximized():
+            self.settings.app_window_maximized = True
+        else:
+            self.settings.app_window_maximized = False
+            self.settings.app_window_size = self.GetSize()
+
+        event.Skip()
+
     def on_close(self, event):
         try:
             self.settings.save()
         except IOError:
             pass
 
-        event.Skip()
+        # Application does not close if window is minimized
+        if self.IsIconized():
+            self.Restore()
+
+        self.Destroy()
 
 
 if __name__ == "__main__":
