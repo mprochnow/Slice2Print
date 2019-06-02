@@ -71,7 +71,10 @@ class MainFrame(wx.Frame):
                     self.canvas.camera.view_all(bb)
 
                 except (AssertionError, ValueError) as e:
-                    msg = "Error in line %s of %s: %s" % (parser.line_no, parser.filename, e)
+                    msg = "Error in line %s of %s:\n%s" % (parser.line_no, parser.filename, e)
+
+                    d = wx.MessageDialog(self, msg, "Error while open file", style=wx.OK | wx.ICON_ERROR)
+                    d.ShowModal()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:
