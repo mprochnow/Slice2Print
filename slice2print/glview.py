@@ -128,6 +128,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         wx.glcanvas.GLCanvas.__init__(self, parent, attribList=attributes)
         self.context = wx.glcanvas.GLContext(self)
         self.initialized = False
+        self.platform_mesh = None
         self.model_mesh = None
         self.camera = Camera()
 
@@ -143,6 +144,9 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_MOTION, self.on_motion)
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
 
+    def set_platform_mesh(self, platform_mesh):
+        self.platform_mesh = platform_mesh
+
     def set_model_mesh(self, model_mesh):
         self.model_mesh = model_mesh
 
@@ -155,6 +159,11 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.model_mesh.update_projection_matrix(self.camera.get_projection_matrix())
             self.model_mesh.update_view_matrix(self.camera.get_view_matrix())
             self.model_mesh.draw()
+
+        if self.platform_mesh:
+            self.platform_mesh.update_projection_matrix(self.camera.get_projection_matrix())
+            self.platform_mesh.update_view_matrix(self.camera.get_view_matrix())
+            self.platform_mesh.draw()
 
         self.SwapBuffers()
 
@@ -171,6 +180,9 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.initialized = True
 
             glEnable(GL_DEPTH_TEST)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
             glClearColor(1, 1, 0.9, 1)
 
         self.draw()

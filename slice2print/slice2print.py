@@ -17,7 +17,6 @@ import ctypes
 
 import wx
 
-import glhelpers
 import glmesh
 import glview
 import icons
@@ -55,6 +54,8 @@ class MainFrame(wx.Frame):
 
         self.Layout()
         self.Maximize(self.settings.app_window_maximized)
+
+        self.canvas.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
 
     def on_exit(self, event):
         self.Close()

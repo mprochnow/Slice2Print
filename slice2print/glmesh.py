@@ -116,3 +116,100 @@ class ModelMesh:
 
             with self.indices:
                 glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, None)
+
+
+class PlatformMesh:
+    def __init__(self, dimensions):
+        self.initialized = False
+        self.dimensions = dimensions
+        self.program = None
+
+        self.view_matrix = numpy.identity(4, numpy.float32)
+        self.projection_matrix = numpy.identity(4, numpy.float32)
+        self.view_matrix_location = None
+        self.projection_matrix_location = None
+        self.vertices = None
+        self.vao = None
+
+    def init(self):
+        self.initialized = True
+
+        self.program = ShaderProgram("""
+        #version 150
+ 
+        in vec3 vertex_position;
+ 
+        uniform mat4 view_matrix;
+        uniform mat4 projection_matrix;
+
+        void main() {
+            gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+        }
+        """, """
+        #version 150
+ 
+        in vec3 color;
+        out vec4 frag_colour;
+ 
+        void main() {
+            frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
+        }
+        """)
+
+        self.view_matrix_location = self.program.get_uniform_location("view_matrix")
+        self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
+
+        vertex_position_index = self.program.get_attrib_location("vertex_position")
+
+        self.vertices = GlBuffer(self._vertices_from_dimensions(self.dimensions))
+
+        self.vao = glGenVertexArrays(1)
+        glBindVertexArray(self.vao)
+
+        with self.vertices:
+            glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
+            glEnableVertexAttribArray(vertex_position_index)
+
+    def update_view_matrix(self, matrix):
+        self.view_matrix = matrix
+
+    def update_projection_matrix(self, matrix):
+        self.projection_matrix = matrix
+
+    def draw(self):
+        if not self.initialized:
+            self.init()
+
+        with self.program:
+            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
+            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+
+            glBindVertexArray(self.vao)
+
+            with self.vertices:
+                glDrawArrays(GL_TRIANGLES, 0, len(self.vertices))
+
+    @staticmethod
+    def _vertices_from_dimensions(dimensions):
+        result = []
+        x = dimensions[0]
+        y = dimensions[1]
+        z = dimensions[2]
+
+        result.append([-x/2, 0, z/2])
+        result.append([x/2, 0, z/2])
+        result.append([x/2, 0, -z/2])
+
+        result.append([x/2, 0, -z/2])
+        result.append([-x/2, 0, -z/2])
+        result.append([-x/2, 0, z/2])
+
+        result.append([-x/2, 0, -z/2])
+        result.append([x/2, 0, -z/2])
+        result.append([x/2, y, -z/2])
+
+        result.append([x/2, y, -z/2])
+        result.append([-x/2, y, -z/2])
+        result.append([-x/2, 0, -z/2])
+
+        return numpy.array(result, numpy.float32)
