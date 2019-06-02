@@ -20,6 +20,7 @@ import wx
 import glview
 import icons
 import model
+import settings
 import settingsdialog
 
 
@@ -27,6 +28,9 @@ class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
 
     def __init__(self):
+        self.settings = settings.Settings()
+        self.settings.load_from_file()
+
         wx.Frame.__init__(self, None, title="Slice2Print", size=(800, 600))
         self.toolbar = self.CreateToolBar()
         self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder.GetBitmap(), shortHelp="Open")
@@ -39,6 +43,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
         self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
         self.SetAcceleratorTable(
             wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT),
@@ -51,9 +56,7 @@ class MainFrame(wx.Frame):
         with wx.FileDialog(self, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
                            style=wx.FD_FILE_MUST_EXIST) as dialog:
             if dialog.ShowModal() != wx.ID_CANCEL:
-                pathname = dialog.GetPath()
-
-                parser = model.StlAsciiFileParser(pathname)
+                parser = model.StlAsciiFileParser(dialog.GetPath())
                 try:
                     vertices, normals, indices, bb = parser.parse()
                     self.canvas.create_mesh(vertices, normals, indices, bb)
@@ -63,8 +66,18 @@ class MainFrame(wx.Frame):
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialogA(self) as dialog:
+            dialog.set_build_volume(self.settings.build_volume)
+
             if dialog.ShowModal() != wx.ID_CANCEL:
-                print(dialog.get_build_volume())
+                self.settings.build_volume = dialog.get_build_volume()
+
+    def on_close(self, event):
+        try:
+            self.settings.save()
+        except IOError:
+            pass
+
+        event.Skip()
 
 
 if __name__ == "__main__":

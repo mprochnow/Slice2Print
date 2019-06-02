@@ -26,16 +26,25 @@ class SettingsDialogA(wx.Dialog):
         btn_sizer = self.CreateButtonSizer(wx.OK | wx.CANCEL)
 
         self.ctrl_bv_x = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
+        self.ctrl_bv_x.SetAllowNegative(False)
+        self.ctrl_bv_x.SetBounds(1, None)
+        self.ctrl_bv_x.SetLimited(True)
         bv_sizer.Add(self.ctrl_bv_x, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_bv_y = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
+        self.ctrl_bv_y.SetAllowNegative(False)
+        self.ctrl_bv_y.SetBounds(1, None)
+        self.ctrl_bv_y.SetLimited(True)
         bv_sizer.Add(self.ctrl_bv_y, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_bv_z = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
+        self.ctrl_bv_z.SetAllowNegative(False)
+        self.ctrl_bv_z.SetBounds(1, None)
+        self.ctrl_bv_z.SetLimited(True)
         bv_sizer.Add(self.ctrl_bv_z, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -46,7 +55,18 @@ class SettingsDialogA(wx.Dialog):
         self.Layout()
         self.Fit()
 
+    def set_build_volume(self, dimensions):
+        """
+        :param dimensions: Build volume dimensions as tuple (x, y, z)
+        """
+        self.ctrl_bv_x.SetValue(dimensions[0])
+        self.ctrl_bv_y.SetValue(dimensions[1])
+        self.ctrl_bv_z.SetValue(dimensions[2])
+
     def get_build_volume(self):
+        """
+        :return: Build volume dimensions as tuple (x, y, z)
+        """
         return self.ctrl_bv_x.GetValue(), self.ctrl_bv_y.GetValue(), self.ctrl_bv_z.GetValue()
 
 
@@ -55,6 +75,4 @@ if __name__ == "__main__":
 
     d = SettingsDialogA(None)
     d.ShowModal()
-
-    print(d.get_build_volume())
 
