@@ -25,7 +25,6 @@ import wx
 import wx.glcanvas
 
 import glhelpers
-import glmesh
 
 
 ProjectionType = enum.Enum("ProjectionType", "PERSPECTIVE ORTHOGRAPHIC")
@@ -107,9 +106,6 @@ class Camera:
         Moves the camera to a position where to complete model is within the viewport.
         :param bb: Instance of model.BoundingBox
         """
-        # Center camera vertical to mesh
-        # The mesh's z position is already set to 0 via its model matrix, so we use the absolute value here
-        self.pos_y = -abs((bb.z_min + bb.z_max) / 2)
 
         # Radius of bounding sphere
         r = numpy.linalg.norm(bb.diagonal()) / 2
@@ -147,14 +143,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.Bind(wx.EVT_MOTION, self.on_motion)
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
 
-    def create_mesh(self, vertices, normals, indices, bounding_box):
-        shader_program = glhelpers.ShaderProgram(glmesh.MODEL_VERTEX_SHADER, glmesh.MODEL_FRAGMENT_SHADER)
-        self.model_mesh = glmesh.ModelMesh(shader_program, vertices, normals, indices, bounding_box)
-
-        self.camera.reset()
-        self.camera.view_all(bounding_box)
-
-        self.Refresh()
+    def set_model_mesh(self, model_mesh):
+        self.model_mesh = model_mesh
 
     def draw(self):
         self.SetCurrent(self.context)

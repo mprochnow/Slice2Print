@@ -17,6 +17,8 @@ import ctypes
 
 import wx
 
+import glhelpers
+import glmesh
 import glview
 import icons
 import model
@@ -64,7 +66,9 @@ class MainFrame(wx.Frame):
                 parser = model.StlAsciiFileParser(dialog.GetPath())
                 try:
                     vertices, normals, indices, bb = parser.parse()
-                    self.canvas.create_mesh(vertices, normals, indices, bb)
+
+                    self.canvas.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
+                    self.canvas.camera.view_all(bb)
 
                 except (AssertionError, ValueError) as e:
                     msg = "Error in line %s of %s: %s" % (parser.line_no, parser.filename, e)
