@@ -136,23 +136,31 @@ class PlatformMesh:
 
         self.program = ShaderProgram("""
         #version 150
- 
+
         in vec3 vertex_position;
- 
+
         uniform mat4 view_matrix;
         uniform mat4 projection_matrix;
 
+        out vec3 pos;
+
         void main() {
             gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+            pos = vertex_position;
         }
         """, """
         #version 150
- 
-        in vec3 color;
+
+        in vec3 pos;
         out vec4 frag_colour;
- 
+
         void main() {
-            frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
+            vec3 pos_scaled = pos / 10.0;
+
+            // https://www.ronja-tutorials.com/2018/05/18/Chessboard.html#checkerboard-in-2d-and-3d        
+            float color = (int(floor(pos_scaled.x) + floor(pos_scaled.y) + floor(pos_scaled.z)) & 1) * 2.0;
+
+            frag_colour = vec4(color, color, color, 0.1);
         }
         """)
 
