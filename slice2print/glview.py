@@ -63,7 +63,7 @@ class Camera:
         self.pos_y += y
 
     def zoom(self, z):
-        if self.camera_distance - z >= 0:
+        if self.camera_distance - z > 0:
             self.camera_distance -= z
 
     def rotate_x(self, degrees):
