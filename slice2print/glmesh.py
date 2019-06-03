@@ -122,19 +122,20 @@ class PlatformMesh:
     def __init__(self, dimensions):
         self.initialized = False
         self.dimensions = dimensions
-        self.program = None
+        self.triangle_program = None
+        self.line_program = None
 
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
-        self.view_matrix_location = None
-        self.projection_matrix_location = None
         self.vertices = None
+        self.triangle_indices = None
+        self.line_indices = None
         self.vao = None
 
     def init(self):
         self.initialized = True
 
-        self.program = ShaderProgram("""
+        self.triangle_program = ShaderProgram("""
         #version 150
 
         in vec3 vertex_position;
@@ -164,12 +165,30 @@ class PlatformMesh:
         }
         """)
 
-        self.view_matrix_location = self.program.get_uniform_location("view_matrix")
-        self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
+        self.line_program = ShaderProgram("""
+        #version 150
+ 
+        in vec3 vertex_position;
+ 
+        uniform mat4 view_matrix;
+        uniform mat4 projection_matrix;
 
-        vertex_position_index = self.program.get_attrib_location("vertex_position")
+       void main() {
+            gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+        }
+        """, """
+        #version 150
+ 
+        out vec4 frag_colour;
+ 
+        void main() {
+            frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
+        }
+        """)
 
-        self.vertices = GlBuffer(self._vertices_from_dimensions(self.dimensions))
+        vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
+
+        self._init_buffers(self.dimensions)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
@@ -188,36 +207,65 @@ class PlatformMesh:
         if not self.initialized:
             self.init()
 
-        with self.program:
-            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+        with self.triangle_program:
+            glUniformMatrix4fv(self.triangle_program.get_uniform_location("view_matrix"),
+                               1, GL_FALSE, self.view_matrix)
+            glUniformMatrix4fv(self.triangle_program.get_uniform_location("projection_matrix"),
+                               1, GL_FALSE, self.projection_matrix)
 
             glBindVertexArray(self.vao)
 
-            with self.vertices:
-                glDrawArrays(GL_TRIANGLES, 0, len(self.vertices))
+            with self.triangle_indices:
+                glPolygonOffset(-1.0, -1.0)
+                glEnable(GL_POLYGON_OFFSET_FILL)
 
-    @staticmethod
-    def _vertices_from_dimensions(dimensions):
-        result = []
+                glDrawElements(GL_TRIANGLES, len(self.triangle_indices), GL_UNSIGNED_INT, None)
+
+                glDisable(GL_POLYGON_OFFSET_FILL)
+
+        with self.line_program:
+            glUniformMatrix4fv(self.line_program.get_uniform_location("view_matrix"),
+                               1, GL_FALSE, self.view_matrix)
+            glUniformMatrix4fv(self.line_program.get_uniform_location("projection_matrix"),
+                               1, GL_FALSE, self.projection_matrix)
+
+            glBindVertexArray(self.vao)
+
+            with self.line_indices:
+                glDrawElements(GL_LINES, len(self.line_indices), GL_UNSIGNED_INT, None)
+
+    def _init_buffers(self, dimensions):
         x = dimensions[0]
         y = dimensions[1]
         z = dimensions[2]
 
-        result.append([-x/2, 0, z/2])
-        result.append([x/2, 0, z/2])
-        result.append([x/2, 0, -z/2])
+        vertices = [[-x/2, 0, z/2],
+                    [x/2, 0, z/2],
+                    [x/2, 0, -z/2],
+                    [-x/2, 0, -z/2],
+                    [x/2, y, -z/2],
+                    [-x/2, y, -z/2],
+                    [-x/2, y, z/2],
+                    [x/2, y, z/2]]
 
-        result.append([x/2, 0, -z/2])
-        result.append([-x/2, 0, -z/2])
-        result.append([-x/2, 0, z/2])
+        triangle_indices = [0, 1, 2,
+                            2, 3, 0,
+                            3, 2, 4,
+                            3, 4, 5]
 
-        result.append([-x/2, 0, -z/2])
-        result.append([x/2, 0, -z/2])
-        result.append([x/2, y, -z/2])
+        line_indices = [0, 1,
+                        0, 6,
+                        1, 2,
+                        1, 7,
+                        2, 3,
+                        2, 4,
+                        3, 0,
+                        3, 5,
+                        4, 5,
+                        4, 7,
+                        5, 6,
+                        6, 7]
 
-        result.append([x/2, y, -z/2])
-        result.append([-x/2, y, -z/2])
-        result.append([-x/2, 0, -z/2])
-
-        return numpy.array(result, numpy.float32)
+        self.vertices = GlBuffer(vertices)
+        self.triangle_indices = GlBuffer(triangle_indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
+        self.line_indices = GlBuffer(line_indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
