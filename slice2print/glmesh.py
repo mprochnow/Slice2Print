@@ -28,7 +28,7 @@ MODEL_VERTEX_SHADER = """
 
     out vec3 color;
 
-    vec3 light_position = vec3 (-1.0, 1.0, 1.0);
+    vec3 light_position = vec3 (1.0, 1.0, -1.0);
 
     void main() {
         gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertex_position, 1.0);
@@ -101,6 +101,9 @@ class ModelMesh:
             glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
 
+    def __del__(self):
+        glDeleteVertexArrays(1, [self.vao])
+
     def update_mesh(self, vertices, normals, indices, bounding_box):
         """
         :param vertices: numpy.array() containing the vertices
@@ -146,6 +149,9 @@ class PlatformMesh:
         self.triangle_indices = None
         self.line_indices = None
         self.vao = None
+
+    def __del__(self):
+        glDeleteVertexArrays(1, [self.vao])
 
     def init(self):
         self.initialized = True
