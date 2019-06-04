@@ -136,8 +136,71 @@ class ModelMesh:
                 glDrawElements(GL_TRIANGLES, len(self.indices), GL_UNSIGNED_INT, None)
 
 
+PLATFORM_VERTEX_SHADER = """
+    #version 150
+
+    in vec3 vertex_position;
+
+    uniform mat4 view_matrix;
+    uniform mat4 projection_matrix;
+
+    out vec3 pos;
+
+    void main() {
+        gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+        pos = vertex_position;
+    }
+"""
+
+PLATFORM_FRAGMENT_SHADER = """
+    #version 150
+
+    in vec3 pos;
+    out vec4 frag_colour;
+
+    void main() {
+        vec3 pos_scaled = pos / 10.0;
+
+        // https://www.ronja-tutorials.com/2018/05/18/Chessboard.html#checkerboard-in-2d-and-3d        
+        float color = (int(floor(pos_scaled.x) + floor(pos_scaled.y) + floor(pos_scaled.z)) & 1) * 2.0;
+
+        frag_colour = vec4(color, color, color, 0.1);
+    }
+"""
+
+PLATFORM_LINE_VERTEX_SHADER = """
+    #version 150
+
+    in vec3 vertex_position;
+
+    uniform mat4 view_matrix;
+    uniform mat4 projection_matrix;
+
+    void main() {
+        gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+    }
+"""
+
+PLATFORM_LINE_FRAGMENT_SHADER = """
+    #version 150
+
+    out vec4 frag_colour;
+
+    void main() {
+        frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
+    }
+"""
+
+
 class PlatformMesh:
+    """
+    Renders the build volume. Shows a checker board pattern at the bottom and
+    back plane. Additionally, edges of build volume a drawn as lines.
+    """
     def __init__(self, dimensions):
+        """
+        :param dimensions: Dimensions of build volume as tuple (x, y, z)
+        """
         self.initialized = False
         self.dimensions = dimensions
         self.triangle_program = None
@@ -156,56 +219,8 @@ class PlatformMesh:
     def init(self):
         self.initialized = True
 
-        self.triangle_program = ShaderProgram("""
-        #version 150
-
-        in vec3 vertex_position;
-
-        uniform mat4 view_matrix;
-        uniform mat4 projection_matrix;
-
-        out vec3 pos;
-
-        void main() {
-            gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
-            pos = vertex_position;
-        }
-        """, """
-        #version 150
-
-        in vec3 pos;
-        out vec4 frag_colour;
-
-        void main() {
-            vec3 pos_scaled = pos / 10.0;
-
-            // https://www.ronja-tutorials.com/2018/05/18/Chessboard.html#checkerboard-in-2d-and-3d        
-            float color = (int(floor(pos_scaled.x) + floor(pos_scaled.y) + floor(pos_scaled.z)) & 1) * 2.0;
-
-            frag_colour = vec4(color, color, color, 0.1);
-        }
-        """)
-
-        self.line_program = ShaderProgram("""
-        #version 150
- 
-        in vec3 vertex_position;
- 
-        uniform mat4 view_matrix;
-        uniform mat4 projection_matrix;
-
-       void main() {
-            gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
-        }
-        """, """
-        #version 150
- 
-        out vec4 frag_colour;
- 
-        void main() {
-            frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
-        }
-        """)
+        self.triangle_program = ShaderProgram(PLATFORM_VERTEX_SHADER, PLATFORM_FRAGMENT_SHADER)
+        self.line_program = ShaderProgram(PLATFORM_LINE_VERTEX_SHADER, PLATFORM_LINE_FRAGMENT_SHADER)
 
         vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
 
@@ -241,6 +256,7 @@ class PlatformMesh:
             glBindVertexArray(self.vao)
 
             with self.triangle_indices:
+                # Offset polygon rendering so that no flickering occurs when model is displayed on build platform
                 glPolygonOffset(-1.0, -1.0)
                 glEnable(GL_POLYGON_OFFSET_FILL)
 
@@ -260,9 +276,12 @@ class PlatformMesh:
                 glDrawElements(GL_LINES, len(self.line_indices), GL_UNSIGNED_INT, None)
 
     def set_dimensions(self, dimensions):
+        """
+        :param dimensions: Dimensions of build volume as tuple (x, y, z)
+        """
         x = dimensions[0]
-        y = dimensions[2]
-        z = dimensions[1]
+        y = dimensions[2]  # y is pointing upwards in OpenGL
+        z = dimensions[1]  # z is pointing "out of the screen" in OpenGL
 
         vertices = numpy.array([[-x/2, 0, z/2],
                                 [x/2, 0, z/2],

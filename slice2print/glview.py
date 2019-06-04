@@ -96,7 +96,7 @@ class Camera:
 
     def view_all(self, bb):
         """
-        Moves the camera to a position where to complete model is within the viewport.
+        Moves the camera to a position where the complete model is within the viewport.
         :param bb: Instance of model.BoundingBox
         """
 

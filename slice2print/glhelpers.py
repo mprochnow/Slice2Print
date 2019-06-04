@@ -26,24 +26,6 @@ def normalize(vector):
     return vector / numpy.linalg.norm(vector)
 
 
-def look_at(camera, at, up):
-    f = normalize(at - camera)
-    r = normalize(numpy.cross(f, up))
-    u = normalize(numpy.cross(r, f))
-
-    rotate = numpy.array([[r[0], u[0], -f[0], 0.0],
-                          [r[1], u[1], -f[1], 0.0],
-                          [r[2], u[2], -f[2], 0.0],
-                          [0.0, 0.0, 0.0, 1.0]], numpy.float32)
-
-    translate = numpy.array([[1.0, 0.0, 0.0, 0.0],
-                             [0.0, 1.0, 0.0, 0.0],
-                             [0.0, 0.0, 1.0, 0.0],
-                             [-camera[0], -camera[1], -camera[2], 1.0]], numpy.float32)
-
-    return numpy.dot(rotate, translate)
-
-
 def rotate_x(deg):
     rad = math.radians(deg)
 
