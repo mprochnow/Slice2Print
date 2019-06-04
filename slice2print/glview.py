@@ -33,6 +33,7 @@ ProjectionType = enum.Enum("ProjectionType", "PERSPECTIVE ORTHOGRAPHIC")
 class Camera:
     DEFAULT_YAW = 25.0
     DEFAULT_PITCH = 25.0
+    DEFAULT_CAMERA_DISTANCE = 140.0
 
     def __init__(self, fov_y=22.5, projection_type=ProjectionType.ORTHOGRAPHIC):
         self.fov_y = fov_y
@@ -43,16 +44,16 @@ class Camera:
 
         self.pos_x = 0.0
         self.pos_y = 0.0
-        self.camera_distance = 140.0
 
+        self.camera_distance = self.DEFAULT_CAMERA_DISTANCE
         self.yaw = self.DEFAULT_YAW
         self.pitch = self.DEFAULT_PITCH
 
     def reset(self):
         self.pos_x = 0.0
         self.pos_y = 0.0
-        self.camera_distance = 140.0
 
+        self.camera_distance = self.DEFAULT_CAMERA_DISTANCE
         self.yaw = self.DEFAULT_YAW
         self.pitch = self.DEFAULT_PITCH
 
@@ -115,7 +116,7 @@ class Camera:
 
 class GlCanvas(wx.glcanvas.GLCanvas):
     CAMERA_SPEED_XY = 0.2
-    CAMERA_SPEED_Z = 4.0
+    CAMERA_SPEED_Z = 10.0
     CAMERA_SPEED_ROTATION = 1.0
 
     def __init__(self, parent):
@@ -180,6 +181,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.initialized = True
 
             glEnable(GL_DEPTH_TEST)
+
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
