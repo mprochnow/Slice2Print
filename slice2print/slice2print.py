@@ -82,7 +82,11 @@ class MainFrame(wx.Frame):
             dialog.set_build_volume(self.settings.build_volume)
 
             if dialog.ShowModal() != wx.ID_CANCEL:
-                self.settings.build_volume = dialog.get_build_volume()
+                build_volume = dialog.get_build_volume()
+                self.settings.build_volume = build_volume
+
+                self.canvas.platform_mesh.set_dimensions(build_volume)
+                self.Refresh()
 
     def on_size(self, event):
         if self.IsMaximized():

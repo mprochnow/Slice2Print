@@ -126,10 +126,17 @@ class ShaderProgram:
 
 
 class GlBuffer:
-    def __init__(self, data, target):
+    def __init__(self, data=None, target=None):
+        self.data = None
+        self.target = None
+        self.vbo = glGenBuffers(1)
+
+        if data is not None:
+            self.set_data(data, target)
+
+    def set_data(self, data, target):
         self.data = data
         self.target = target
-        self.vbo = glGenBuffers(1)
 
         glBindBuffer(self.target, self.vbo)
         glBufferData(self.target,

@@ -101,6 +101,21 @@ class ModelMesh:
             glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
 
+    def update_mesh(self, vertices, normals, indices, bounding_box):
+        """
+        :param vertices: numpy.array() containing the vertices
+        :param normals: numpy.array() containing the normals
+        :param indices:  numpy.array() containing the indices
+        :param bounding_box:  Instance of model.BoundingBox
+        """
+        self.vertices.set_data(vertices, GL_ARRAY_BUFFER)
+        self.normals.set_data(normals, GL_ARRAY_BUFFER)
+        self.indices.set_data(indices, GL_ELEMENT_ARRAY_BUFFER)
+
+        self.model_matrix[3][0] = -(bounding_box.x_max+bounding_box.x_min) / 2
+        self.model_matrix[3][1] = -(bounding_box.y_max+bounding_box.y_min) / 2
+        self.model_matrix[3][2] = -bounding_box.z_min
+
     def update_view_matrix(self, matrix):
         self.view_matrix = matrix
 
@@ -188,7 +203,11 @@ class PlatformMesh:
 
         vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
 
-        self._init_buffers(self.dimensions)
+        self.vertices = GlBuffer()
+        self.triangle_indices = GlBuffer()
+        self.line_indices = GlBuffer()
+
+        self.set_dimensions(self.dimensions)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
@@ -234,10 +253,10 @@ class PlatformMesh:
             with self.line_indices:
                 glDrawElements(GL_LINES, len(self.line_indices), GL_UNSIGNED_INT, None)
 
-    def _init_buffers(self, dimensions):
+    def set_dimensions(self, dimensions):
         x = dimensions[0]
-        y = dimensions[1]
-        z = dimensions[2]
+        y = dimensions[2]
+        z = dimensions[1]
 
         vertices = numpy.array([[-x/2, 0, z/2],
                                 [x/2, 0, z/2],
@@ -266,6 +285,6 @@ class PlatformMesh:
                                     5, 6,
                                     6, 7], numpy.uint32)
 
-        self.vertices = GlBuffer(vertices, GL_ARRAY_BUFFER)
-        self.triangle_indices = GlBuffer(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
-        self.line_indices = GlBuffer(line_indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.vertices.set_data(vertices, GL_ARRAY_BUFFER)
+        self.triangle_indices.set_data(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.line_indices.set_data(line_indices, GL_ELEMENT_ARRAY_BUFFER)
