@@ -81,9 +81,9 @@ class ModelMesh:
         vertex_position_index = self.program.get_attrib_location("vertex_position")
         vertex_normal_index = self.program.get_attrib_location("vertex_normal")
 
-        self.vertices = GlBuffer(vertices)
-        self.normals = GlBuffer(normals)
-        self.indices = GlBuffer(indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
+        self.vertices = GlBuffer(vertices, GL_ARRAY_BUFFER)
+        self.normals = GlBuffer(normals, GL_ARRAY_BUFFER)
+        self.indices = GlBuffer(indices, GL_ELEMENT_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
@@ -239,33 +239,33 @@ class PlatformMesh:
         y = dimensions[1]
         z = dimensions[2]
 
-        vertices = [[-x/2, 0, z/2],
-                    [x/2, 0, z/2],
-                    [x/2, 0, -z/2],
-                    [-x/2, 0, -z/2],
-                    [x/2, y, -z/2],
-                    [-x/2, y, -z/2],
-                    [-x/2, y, z/2],
-                    [x/2, y, z/2]]
+        vertices = numpy.array([[-x/2, 0, z/2],
+                                [x/2, 0, z/2],
+                                [x/2, 0, -z/2],
+                                [-x/2, 0, -z/2],
+                                [x/2, y, -z/2],
+                                [-x/2, y, -z/2],
+                                [-x/2, y, z/2],
+                                [x/2, y, z/2]], numpy.float32)
 
-        triangle_indices = [0, 1, 2,
-                            2, 3, 0,
-                            3, 2, 4,
-                            3, 4, 5]
+        triangle_indices = numpy.array([0, 1, 2,
+                                        2, 3, 0,
+                                        3, 2, 4,
+                                        3, 4, 5], numpy.uint32)
 
-        line_indices = [0, 1,
-                        0, 6,
-                        1, 2,
-                        1, 7,
-                        2, 3,
-                        2, 4,
-                        3, 0,
-                        3, 5,
-                        4, 5,
-                        4, 7,
-                        5, 6,
-                        6, 7]
+        line_indices = numpy.array([0, 1,
+                                    0, 6,
+                                    1, 2,
+                                    1, 7,
+                                    2, 3,
+                                    2, 4,
+                                    3, 0,
+                                    3, 5,
+                                    4, 5,
+                                    4, 7,
+                                    5, 6,
+                                    6, 7], numpy.uint32)
 
-        self.vertices = GlBuffer(vertices)
-        self.triangle_indices = GlBuffer(triangle_indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
-        self.line_indices = GlBuffer(line_indices, numpy.uint32, GL_ELEMENT_ARRAY_BUFFER)
+        self.vertices = GlBuffer(vertices, GL_ARRAY_BUFFER)
+        self.triangle_indices = GlBuffer(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.line_indices = GlBuffer(line_indices, GL_ELEMENT_ARRAY_BUFFER)

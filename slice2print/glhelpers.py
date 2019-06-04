@@ -126,9 +126,9 @@ class ShaderProgram:
 
 
 class GlBuffer:
-    def __init__(self, data, dtype=numpy.float32, target=GL_ARRAY_BUFFER):
+    def __init__(self, data, target):
+        self.data = data
         self.target = target
-        self.data = numpy.array(data, dtype)
         self.vbo = glGenBuffers(1)
 
         glBindBuffer(self.target, self.vbo)
@@ -136,6 +136,7 @@ class GlBuffer:
                      ArrayDatatype.arrayByteCount(self.data),
                      ArrayDatatype.voidDataPointer(self.data),
                      GL_STATIC_DRAW)
+        glBindBuffer(self.target, 0)
 
     def __len__(self):
         return len(self.data)
