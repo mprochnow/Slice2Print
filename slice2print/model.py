@@ -209,13 +209,3 @@ class StlAsciiFileParser:
         self.parser_state = StlParserState.ENDFACET
 
         return True
-
-
-if __name__ == "__main__":
-    parser = StlAsciiFileParser("cube.stl")
-    vertices, normals, indices, bb = parser.parse()
-
-    print(len(vertices), vertices)
-    print(len(normals), normals)
-    print(len(indices), indices)
-    print(bb)
