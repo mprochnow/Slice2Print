@@ -49,14 +49,6 @@ class Camera:
         self.yaw = self.DEFAULT_YAW
         self.pitch = self.DEFAULT_PITCH
 
-    def reset(self):
-        self.pos_x = 0.0
-        self.pos_y = 0.0
-
-        self.camera_distance = self.DEFAULT_CAMERA_DISTANCE
-        self.yaw = self.DEFAULT_YAW
-        self.pitch = self.DEFAULT_PITCH
-
     def move_x(self, x):
         self.pos_x += x
 
@@ -107,6 +99,12 @@ class Camera:
         Moves the camera to a position where to complete model is within the viewport.
         :param bb: Instance of model.BoundingBox
         """
+
+        self.pos_x = 0.0
+        # Center camera vertical to mesh (the mesh's z position is already set to 0 via its model matrix)
+        self.pos_y = -(bb.z_max - bb.z_min) / 2
+        self.yaw = self.DEFAULT_YAW
+        self.pitch = self.DEFAULT_PITCH
 
         # Radius of bounding sphere
         r = numpy.linalg.norm(bb.diagonal()) / 2
