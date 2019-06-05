@@ -116,7 +116,7 @@ class GlBuffer:
         if data is not None:
             self.set_data(data, target)
 
-    def __del__(self):
+    def delete(self):
         glDeleteBuffers(1, [self.vbo])
 
     def set_data(self, data, target):

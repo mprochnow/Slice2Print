@@ -147,6 +147,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.platform_mesh = platform_mesh
 
     def set_model_mesh(self, model_mesh):
+        if self.model_mesh:
+            self.model_mesh.delete()
         self.model_mesh = model_mesh
 
     def draw(self):

@@ -101,7 +101,10 @@ class ModelMesh:
             glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
 
-    def __del__(self):
+    def delete(self):
+        self.vertices.delete()
+        self.normals.delete()
+        self.indices.delete()
         glDeleteVertexArrays(1, [self.vao])
 
     def update_mesh(self, vertices, normals, indices, bounding_box):
@@ -212,9 +215,6 @@ class PlatformMesh:
         self.triangle_indices = None
         self.line_indices = None
         self.vao = None
-
-    def __del__(self):
-        glDeleteVertexArrays(1, [self.vao])
 
     def init(self):
         self.initialized = True
