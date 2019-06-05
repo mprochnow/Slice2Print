@@ -62,6 +62,7 @@ class ModelMesh:
         :param bounding_box:  Instance of model.BoundingBox
         """
         self.program = ShaderProgram(MODEL_VERTEX_SHADER, MODEL_FRAGMENT_SHADER)
+        self.bounding_box = bounding_box
 
         self.model_matrix = numpy.identity(4, numpy.float32)
         self.model_matrix[3][0] = -(bounding_box.x_max+bounding_box.x_min) / 2
@@ -198,7 +199,7 @@ PLATFORM_LINE_FRAGMENT_SHADER = """
 class PlatformMesh:
     """
     Renders the build volume. Shows a checker board pattern at the bottom and
-    back plane. Additionally, edges of build volume a drawn as lines.
+    back plane. Additionally, edges of build volume are drawn as lines.
     """
     def __init__(self, dimensions):
         """

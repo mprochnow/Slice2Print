@@ -151,6 +151,11 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.model_mesh.delete()
         self.model_mesh = model_mesh
 
+    def view_all(self):
+        if self.model_mesh:
+            self.camera.view_all(self.model_mesh.bounding_box)
+            self.Refresh()
+
     def draw(self):
         self.SetCurrent(self.context)
 

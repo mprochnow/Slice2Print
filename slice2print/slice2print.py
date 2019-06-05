@@ -35,15 +35,20 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
 
         self.toolbar = self.CreateToolBar()
-        self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder.GetBitmap(), shortHelp="Open")
+        print(wx.ArtProvider.GetNativeSizeHint(wx.ART_TOOLBAR))
+
+        self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
         self.toolbar.AddSeparator()
-        self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.wrench_orange.GetBitmap(), shortHelp="Settings")
+        self.tool_view_all = self.toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
+        self.toolbar.AddStretchableSpace()
+        self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.settings24.GetBitmap(), shortHelp="Settings")
         self.toolbar.Realize()
 
         self.canvas = glview.GlCanvas(self)
 
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_view_all, id=self.tool_view_all.GetId())
         self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -76,6 +81,9 @@ class MainFrame(wx.Frame):
 
                     d = wx.MessageDialog(self, msg, "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
+
+    def on_view_all(self, event):
+        self.canvas.view_all()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:
