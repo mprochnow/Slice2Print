@@ -33,6 +33,7 @@ class MainFrame(wx.Frame):
         self.settings.load_from_file()
 
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
+        self.SetMinSize((640, 480))
 
         self.toolbar = self.CreateToolBar()
         print(wx.ArtProvider.GetNativeSizeHint(wx.ART_TOOLBAR))
@@ -43,6 +44,8 @@ class MainFrame(wx.Frame):
         self.toolbar.AddStretchableSpace()
         self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.settings24.GetBitmap(), shortHelp="Settings")
         self.toolbar.Realize()
+
+        self.statusbar = self.CreateStatusBar(1)
 
         self.canvas = glview.GlCanvas(self)
 
@@ -76,6 +79,10 @@ class MainFrame(wx.Frame):
                     self.canvas.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
                     self.canvas.camera.view_all(bb)
 
+                    self.statusbar.SetStatusText(
+                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(bb.x_max-bb.x_min,
+                                                                         bb.y_max-bb.y_min,
+                                                                         bb.z_max-bb.z_min))
                 except (AssertionError, ValueError) as e:
                     msg = "Error in line %s of %s:\n%s" % (parser.line_no, parser.filename, e)
 
