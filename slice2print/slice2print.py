@@ -36,8 +36,6 @@ class MainFrame(wx.Frame):
         self.SetMinSize((640, 480))
 
         self.toolbar = self.CreateToolBar()
-        print(wx.ArtProvider.GetNativeSizeHint(wx.ART_TOOLBAR))
-
         self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
         self.toolbar.AddSeparator()
         self.tool_view_all = self.toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
