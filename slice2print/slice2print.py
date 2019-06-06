@@ -45,7 +45,15 @@ class MainFrame(wx.Frame):
 
         self.statusbar = self.CreateStatusBar(1)
 
-        self.canvas = glview.GlCanvas(self)
+        self.notebook = wx.Notebook(self)
+        self.model_view = glview.GlCanvas(self.notebook)
+
+        self.notebook.AddPage(self.model_view, "3D Model")
+        self.notebook.AddPage(wx.Panel(self.notebook), "")
+
+        sizer = wx.BoxSizer()
+        sizer.Add(self.notebook, 1, wx.EXPAND)
+        self.SetSizer(sizer)
 
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
@@ -61,7 +69,7 @@ class MainFrame(wx.Frame):
         self.Layout()
         self.Maximize(self.settings.app_window_maximized)
 
-        self.canvas.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
+        self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
 
     def on_exit(self, event):
         self.Close()
@@ -74,8 +82,8 @@ class MainFrame(wx.Frame):
                 try:
                     vertices, normals, indices, bb = parser.parse()
 
-                    self.canvas.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
-                    self.canvas.view_all()
+                    self.model_view.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
+                    self.model_view.view_all()
 
                     self.statusbar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(bb.x_max-bb.x_min,
@@ -88,7 +96,7 @@ class MainFrame(wx.Frame):
                     d.ShowModal()
 
     def on_view_all(self, event):
-        self.canvas.view_all()
+        self.model_view.view_all()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:
@@ -98,7 +106,7 @@ class MainFrame(wx.Frame):
                 build_volume = dialog.get_build_volume()
                 self.settings.build_volume = build_volume
 
-                self.canvas.platform_mesh.set_dimensions(build_volume)
+                self.model_view.platform_mesh.set_dimensions(build_volume)
                 self.Refresh()
 
     def on_size(self, event):
