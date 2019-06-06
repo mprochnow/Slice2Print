@@ -75,7 +75,7 @@ class MainFrame(wx.Frame):
                     vertices, normals, indices, bb = parser.parse()
 
                     self.canvas.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
-                    self.canvas.camera.view_all(bb)
+                    self.canvas.view_all()
 
                     self.statusbar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(bb.x_max-bb.x_min,
