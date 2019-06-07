@@ -16,17 +16,47 @@
 from glhelpers import *
 
 
+BASIC_VERTEX_SHADER = """
+    #version 150
+
+    in vec3 vertex_position;
+
+    uniform vec4 model_color;
+    uniform mat4 view_matrix;
+    uniform mat4 projection_matrix;
+
+    out vec4 color;
+
+    void main() {
+        gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+        color = model_color;
+    }
+"""
+
+BASIC_FRAGMENT_SHADER = """
+    #version 150
+
+    in vec4 color;
+    out vec4 frag_colour;
+
+    void main() {
+        frag_colour = color;
+    }
+    """
+
+
 MODEL_VERTEX_SHADER = """
     #version 150
 
     in vec3 vertex_normal;
     in vec3 vertex_position;
 
+    uniform vec4 model_color;
     uniform mat4 model_matrix;
     uniform mat4 view_matrix;
     uniform mat4 projection_matrix;
 
-    out vec3 color;
+    out vec4 color;
 
     vec3 light_position = vec3 (1.0, 1.0, -1.0);
 
@@ -37,18 +67,10 @@ MODEL_VERTEX_SHADER = """
 
         float light = 0.2 + abs(dot(normalize(normal_eye), normalize(light_position)));
 
-        color = vec3(1.0, 0.5, 0.0) * light;
-    }
-    """
-
-MODEL_FRAGMENT_SHADER = """
-    #version 150
-
-    in vec3 color;
-    out vec4 frag_colour;
-
-    void main() {
-        frag_colour = vec4(color, 1.0);
+        color = vec4(model_color[0] * light,
+                     model_color[1] * light,
+                     model_color[2] * light,
+                     model_color[3]);
     }
     """
 
@@ -61,8 +83,10 @@ class ModelMesh:
         :param indices:  numpy.array() containing the indices
         :param bounding_box:  Instance of model.BoundingBox
         """
-        self.program = ShaderProgram(MODEL_VERTEX_SHADER, MODEL_FRAGMENT_SHADER)
+        self.program = ShaderProgram(MODEL_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
         self.bounding_box = bounding_box
+
+        self.model_color = numpy.array([1.0, 0.5, 0.0, 1.0], numpy.float32)
 
         self.model_matrix = numpy.identity(4, numpy.float32)
         self.model_matrix[3][0] = -(bounding_box.x_max+bounding_box.x_min) / 2
@@ -75,6 +99,7 @@ class ModelMesh:
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
 
+        self.model_color_location = self.program.get_uniform_location("model_color")
         self.model_matrix_location = self.program.get_uniform_location("model_matrix")
         self.view_matrix_location = self.program.get_uniform_location("view_matrix")
         self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
@@ -98,6 +123,7 @@ class ModelMesh:
             glEnableVertexAttribArray(vertex_normal_index)
 
         with self.program:
+            glUniform4fv(self.model_color_location, 1, self.model_color)
             glUniformMatrix4fv(self.model_matrix_location, 1, GL_FALSE, self.model_matrix)
             glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
@@ -172,29 +198,6 @@ PLATFORM_FRAGMENT_SHADER = """
     }
 """
 
-PLATFORM_LINE_VERTEX_SHADER = """
-    #version 150
-
-    in vec3 vertex_position;
-
-    uniform mat4 view_matrix;
-    uniform mat4 projection_matrix;
-
-    void main() {
-        gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
-    }
-"""
-
-PLATFORM_LINE_FRAGMENT_SHADER = """
-    #version 150
-
-    out vec4 frag_colour;
-
-    void main() {
-        frag_colour = vec4(0.0, 0.0, 0.0, 0.1);
-    }
-"""
-
 
 class PlatformMesh:
     """
@@ -210,6 +213,8 @@ class PlatformMesh:
         self.triangle_program = None
         self.line_program = None
 
+        self.line_color = numpy.array([0.0, 0.0, 0.0, 0.1], numpy.float32)
+
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
         self.vertices = None
@@ -221,9 +226,10 @@ class PlatformMesh:
         self.initialized = True
 
         self.triangle_program = ShaderProgram(PLATFORM_VERTEX_SHADER, PLATFORM_FRAGMENT_SHADER)
-        self.line_program = ShaderProgram(PLATFORM_LINE_VERTEX_SHADER, PLATFORM_LINE_FRAGMENT_SHADER)
+        self.line_program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
 
         vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
+        model_color_location = self.line_program.get_uniform_location("model_color")
 
         self.vertices = GlBuffer()
         self.triangle_indices = GlBuffer()
@@ -237,6 +243,9 @@ class PlatformMesh:
         with self.vertices:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_position_index)
+
+        with self.line_program:
+            glUniform4fv(model_color_location, 1, self.line_color)
 
     def update_view_matrix(self, matrix):
         self.view_matrix = matrix
