@@ -126,6 +126,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.mouse_x = 0
         self.mouse_y = 0
 
+        self.Bind(wx.EVT_SHOW, self.on_show)
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -165,13 +166,21 @@ class GlCanvas(wx.glcanvas.GLCanvas):
 
         self.SwapBuffers()
 
-    def on_size(self, event):
+    def update_viewport(self):
         self.SetCurrent(self.context)
 
         size = self.GetClientSize()
         self.camera.update_viewport(0, 0, size.width, size.height)
 
-        self.Refresh(False)
+        self.Refresh()
+
+    def on_show(self, event):
+        if event.IsShown():
+            self.update_viewport()
+
+    def on_size(self, event):
+        if self.IsShown():
+            self.update_viewport()
 
     def on_paint(self, event):
         if not self.initialized:
