@@ -27,18 +27,13 @@ import wx.glcanvas
 import glhelpers
 
 
-ProjectionType = enum.Enum("ProjectionType", "PERSPECTIVE ORTHOGRAPHIC")
-
-
 class Camera:
     DEFAULT_YAW = 25.0
     DEFAULT_PITCH = 25.0
     DEFAULT_CAMERA_DISTANCE = 140.0
 
-    def __init__(self, fov_y=22.5, projection_type=ProjectionType.ORTHOGRAPHIC):
+    def __init__(self, fov_y=22.5):
         self.fov_y = fov_y
-        self.projection_type = projection_type
-
         self.viewport_width = 0
         self.viewport_height = 0
 
@@ -72,16 +67,13 @@ class Camera:
         self.viewport_height = height
 
     def get_projection_matrix(self):
-        if self.projection_type == ProjectionType.PERSPECTIVE:
-            return glhelpers.perspective(self.fov_y, self.viewport_width / self.viewport_height, 1.0, 1000.0)
-        elif self.projection_type == ProjectionType.ORTHOGRAPHIC:
-            dist = self.camera_distance
-            aspect = self.viewport_width / self.viewport_height
+        dist = self.camera_distance
+        aspect = self.viewport_width / self.viewport_height
 
-            height = dist * math.tan(math.radians(self.fov_y / 2))
-            width = height * aspect
+        height = dist * math.tan(math.radians(self.fov_y / 2))
+        width = height * aspect
 
-            return glhelpers.orthographic(-width, width, -height, height, -100.0 * dist, 100.0 * dist)
+        return glhelpers.orthographic(-width, width, -height, height, -100.0 * dist, 100.0 * dist)
 
     def _get_rotation_matrix(self):
         mr_x = glhelpers.rotate_x(self.pitch)

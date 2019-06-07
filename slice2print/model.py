@@ -35,31 +35,12 @@ class BoundingBox:
         self.z_min = min(vertex[2], self.z_min)
         self.z_max = max(vertex[2], self.z_max)
 
-    def center(self):
-        """
-        :return: Vector to the center of the bounding box
-        """
-        return numpy.array([(self.x_max-self.x_min)/2,
-                            (self.y_max-self.y_min)/2,
-                            (self.z_max-self.z_min)/2])
-
     def diagonal(self):
         """
         :return: Vector for the diagonal of the bounding box
         """
         return numpy.subtract(numpy.array([self.x_min, self.y_min, self.z_min]),
                               numpy.array([self.x_max, self.y_max, self.z_max]))
-
-    def copy(self):
-        result = BoundingBox()
-        result.x_min = self.x_min
-        result.x_max = self.x_max
-        result.y_min = self.y_min
-        result.y_max = self.y_max
-        result.z_min = self.z_min
-        result.z_max = self.z_max
-
-        return result
 
     def __str__(self):
         return """Bounding box:

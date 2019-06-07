@@ -3,25 +3,25 @@ import json
 import os.path
 import sys
 
+DEFAULT_SETTINGS = {
+    "application": {
+        "window": {
+            "width": 800,
+            "height": 600,
+            "maximized": False
+        }
+    },
+    "build_volume": {
+        "x": 200,
+        "y": 200,
+        "z": 200
+    }
+}
+
 
 class Settings:
     APP_NAME = "Slice2Print"
     FILE_NAME = "settings.json"
-
-    DEFAULT = {
-        "application": {
-            "window": {
-                "width": 800,
-                "height": 600,
-                "maximized": False
-            }
-        },
-        "build_volume": {
-            "x": 200,
-            "y": 200,
-            "z": 200
-        }
-    }
 
     def __init__(self):
         if sys.platform == "win32":
@@ -37,7 +37,7 @@ class Settings:
             raise RuntimeError("Unsupported platform: %s" % sys.platform)
 
         self.path_to_file = os.path.join(self.path_to_folder, self.FILE_NAME)
-        self.settings = copy.deepcopy(self.DEFAULT)
+        self.settings = copy.deepcopy(DEFAULT_SETTINGS)
 
     def load_from_file(self):
         """
@@ -79,7 +79,7 @@ class Settings:
         Falls back to default values in case of an error
         :return: Build volume dimensions as tuple (x, y, z)
         """
-        build_volume = self.settings.get("build_volume", self.DEFAULT["build_volume"])
+        build_volume = self.settings.get("build_volume", DEFAULT_SETTINGS["build_volume"])
 
         try:
             assert isinstance(build_volume["x"], (int, float)) and \
@@ -88,7 +88,7 @@ class Settings:
 
             assert build_volume["x"] > 0 and build_volume["y"] > 0 and build_volume["z"] > 0
         except (AssertionError, KeyError):
-            build_volume = self.DEFAULT["build_volume"]
+            build_volume = DEFAULT_SETTINGS["build_volume"]
 
         return build_volume["x"], build_volume["y"], build_volume["z"]
 
@@ -100,7 +100,7 @@ class Settings:
         try:
             build_volume = self.settings["build_volume"]
         except KeyError:
-            build_volume = self.settings["build_volume"] = copy.deepcopy(self.DEFAULT["build_volume"])
+            build_volume = self.settings["build_volume"] = copy.deepcopy(DEFAULT_SETTINGS["build_volume"])
 
         build_volume["x"] = dimensions[0]
         build_volume["y"] = dimensions[1]
@@ -111,14 +111,14 @@ class Settings:
         """
         :return: Application window size as tuple (width, height)
         """
-        application = self.settings.get("application", self.DEFAULT["application"])
-        window = application.get("window", self.DEFAULT["application"]["window"])
+        application = self.settings.get("application", DEFAULT_SETTINGS["application"])
+        window = application.get("window", DEFAULT_SETTINGS["application"]["window"])
 
         try:
             assert isinstance(window["width"], int) and isinstance(window["height"], int)
             assert window["width"] > 0 and window["height"] > 0
         except (AssertionError, KeyError):
-            window = self.DEFAULT["application"]["window"]
+            window = DEFAULT_SETTINGS["application"]["window"]
 
         return window["width"], window["height"]
 
@@ -130,7 +130,7 @@ class Settings:
         try:
             application = self.settings["application"]
         except KeyError:
-            application = self.settings["application"] = copy.deepcopy(self.DEFAULT["application"])
+            application = self.settings["application"] = copy.deepcopy(DEFAULT_SETTINGS["application"])
 
         window = application["window"]
         window["width"], window["height"] = size
@@ -140,13 +140,13 @@ class Settings:
         """
         :return: True if application window shall be maximized else False
         """
-        application = self.settings.get("application", self.DEFAULT["application"])
-        window = application.get("window", self.DEFAULT["application"]["window"])
+        application = self.settings.get("application", DEFAULT_SETTINGS["application"])
+        window = application.get("window", DEFAULT_SETTINGS["application"]["window"])
 
         try:
             assert isinstance(window["maximized"], bool)
         except (AssertionError, KeyError):
-            window = self.DEFAULT["application"]["window"]
+            window = DEFAULT_SETTINGS["application"]["window"]
 
         return window["maximized"]
 
@@ -158,7 +158,7 @@ class Settings:
         try:
             application = self.settings["application"]
         except KeyError:
-            application = self.settings["application"] = copy.deepcopy(self.DEFAULT["application"])
+            application = self.settings["application"] = copy.deepcopy(DEFAULT_SETTINGS["application"])
 
         application["window"]["maximized"] = maximized
 
