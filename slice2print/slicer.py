@@ -41,7 +41,7 @@ class Slicer:
             z_max = max(v3[2], max(v2[2], max(v1[2], -float("Inf"))))
 
             z_min = math.floor(z_min / layer_height) * layer_height
-            z_max = math.floor(z_max / layer_height) * layer_height
+            z_max = math.ceil(z_max / layer_height) * layer_height
 
             steps = int((z_max - z_min) / layer_height)
 
