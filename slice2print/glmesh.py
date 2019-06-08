@@ -22,13 +22,14 @@ BASIC_VERTEX_SHADER = """
     in vec3 vertex_position;
 
     uniform vec4 model_color;
+    uniform mat4 model_matrix;
     uniform mat4 view_matrix;
     uniform mat4 projection_matrix;
 
     out vec4 color;
 
     void main() {
-        gl_Position = projection_matrix * view_matrix * vec4(vertex_position, 1.0);
+        gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertex_position, 1.0);
         color = model_color;
     }
 """
@@ -215,6 +216,7 @@ class PlatformMesh:
 
         self.line_color = numpy.array([0.0, 0.0, 0.0, 0.1], numpy.float32)
 
+        self.model_matrix = numpy.identity(4, numpy.float32)
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
         self.vertices = None
@@ -258,6 +260,8 @@ class PlatformMesh:
             self.init()
 
         with self.triangle_program:
+            glUniformMatrix4fv(self.triangle_program.get_uniform_location("model_matrix"),
+                               1, GL_FALSE, self.model_matrix)
             glUniformMatrix4fv(self.triangle_program.get_uniform_location("view_matrix"),
                                1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.triangle_program.get_uniform_location("projection_matrix"),
@@ -323,3 +327,80 @@ class PlatformMesh:
         self.vertices.set_data(vertices, GL_ARRAY_BUFFER)
         self.triangle_indices.set_data(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
         self.line_indices.set_data(line_indices, GL_ELEMENT_ARRAY_BUFFER)
+
+
+class LayerMesh:
+    def __init__(self, vertices, bounding_box):
+        self.initialized = False
+        self.vertices = vertices
+        self.bounding_box = bounding_box
+
+        self.program = None
+        self.model_color_location = None
+        self.model_matrix_location = None
+        self.view_matrix_location = None
+        self.projection_matrix_location = None
+        self.vbo = None
+        self.vao = None
+
+        self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
+        self.view_matrix = numpy.identity(4, numpy.float32)
+        self.projection_matrix = numpy.identity(4, numpy.float32)
+
+        self.model_matrix = numpy.identity(4, numpy.float32)
+        self.model_matrix[3][0] = -(bounding_box.x_max+bounding_box.x_min) / 2
+        self.model_matrix[3][1] = -(bounding_box.y_max+bounding_box.y_min) / 2
+        self.model_matrix[3][2] = -bounding_box.z_min
+
+        # OpenGL z-axis points in a different direction, so we have to flip the model
+        self.model_matrix = numpy.dot(self.model_matrix, rotate_x(-90))
+
+    def init(self):
+        self.initialized = True
+
+        self.program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
+
+        self.model_color_location = self.program.get_uniform_location("model_color")
+        self.model_matrix_location = self.program.get_uniform_location("model_matrix")
+        self.view_matrix_location = self.program.get_uniform_location("view_matrix")
+        self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
+
+        self.vbo = GlBuffer(self.vertices, GL_ARRAY_BUFFER)
+
+        self.vao = glGenVertexArrays(1)
+        glBindVertexArray(self.vao)
+
+        vertex_position_index = self.program.get_attrib_location("vertex_position")
+
+        with self.vbo:
+            glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
+            glEnableVertexAttribArray(vertex_position_index)
+
+        with self.program:
+            glUniform4fv(self.model_color_location, 1, self.model_color)
+            glUniformMatrix4fv(self.model_matrix_location, 1, GL_FALSE, self.model_matrix)
+            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
+            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+
+    def delete(self):
+        self.vbo.delete()
+        glDeleteVertexArrays(1, [self.vao])
+
+    def update_view_matrix(self, matrix):
+        self.view_matrix = matrix
+
+    def update_projection_matrix(self, matrix):
+        self.projection_matrix = matrix
+
+    def draw(self):
+        if not self.initialized:
+            self.init()
+
+        with self.program:
+            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
+            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+
+            glBindVertexArray(self.vao)
+
+            with self.vbo:
+                glDrawArrays(GL_LINES, 0, len(self.vbo))

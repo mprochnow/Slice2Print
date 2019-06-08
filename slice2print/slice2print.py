@@ -15,12 +15,14 @@
 
 import ctypes
 
+import numpy
 import wx
 
 import glmesh
 import glview
 import icons
 import model
+import slicer
 import settings
 import settingsdialog
 
@@ -32,6 +34,8 @@ class MainFrame(wx.Frame):
         self.settings = settings.Settings()
         self.settings.load_from_file()
 
+        self.slicer = None
+
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
         self.SetMinSize((640, 480))
 
@@ -39,6 +43,7 @@ class MainFrame(wx.Frame):
         self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
         self.toolbar.AddSeparator()
         self.tool_view_all = self.toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
+        self.tool_slice = self.toolbar.AddTool(wx.ID_ANY, "", icons.play24.GetBitmap(), shortHelp="Slice")
         self.toolbar.AddStretchableSpace()
         self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.settings24.GetBitmap(), shortHelp="Settings")
         self.toolbar.Realize()
@@ -47,9 +52,10 @@ class MainFrame(wx.Frame):
 
         self.notebook = wx.Notebook(self)
         self.model_view = glview.GlCanvas(self.notebook)
+        self.layer_view = glview.GlCanvas(self.notebook)
 
         self.notebook.AddPage(self.model_view, "3D Model")
-        self.notebook.AddPage(wx.Panel(self.notebook), "")
+        self.notebook.AddPage(self.layer_view, "Sliced Model")
 
         sizer = wx.BoxSizer()
         sizer.Add(self.notebook, 1, wx.EXPAND)
@@ -58,6 +64,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
         self.Bind(wx.EVT_TOOL, self.on_view_all, id=self.tool_view_all.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_slice, id=self.tool_slice.GetId())
         self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -70,6 +77,7 @@ class MainFrame(wx.Frame):
         self.Maximize(self.settings.app_window_maximized)
 
         self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
+        self.layer_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
 
     def on_exit(self, event):
         self.Close()
@@ -82,6 +90,8 @@ class MainFrame(wx.Frame):
                 try:
                     vertices, normals, indices, bb = parser.parse()
 
+                    self.notebook.SetSelection(0)
+
                     self.model_view.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
                     self.model_view.view_all()
 
@@ -89,6 +99,8 @@ class MainFrame(wx.Frame):
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(bb.x_max-bb.x_min,
                                                                          bb.y_max-bb.y_min,
                                                                          bb.z_max-bb.z_min))
+
+                    self.slicer = slicer.Slicer(vertices, normals, indices)
                 except (AssertionError, ValueError) as e:
                     msg = "Error in line %s of %s:\n%s" % (parser.line_no, parser.filename, e)
 
@@ -96,7 +108,19 @@ class MainFrame(wx.Frame):
                     d.ShowModal()
 
     def on_view_all(self, event):
-        self.model_view.view_all()
+        page = self.notebook.GetSelection()
+        if page == 0:
+            self.model_view.view_all()
+        elif page == 1:
+            self.layer_view.view_all()
+
+    def on_slice(self, event):
+        segments = numpy.array(self.slicer.slice(0.2), numpy.float32).flatten()
+
+        self.notebook.SetSelection(1)
+
+        self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model_view.model_mesh.bounding_box))
+        self.layer_view.view_all()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:
