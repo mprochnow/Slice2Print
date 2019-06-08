@@ -279,6 +279,9 @@ class PlatformMesh:
                 glDisable(GL_POLYGON_OFFSET_FILL)
 
         with self.line_program:
+            glUniform4fv(self.line_program.get_uniform_location("model_color"), 1, self.line_color)
+            glUniformMatrix4fv(self.line_program.get_uniform_location("model_matrix"),
+                               1, GL_FALSE, self.model_matrix)
             glUniformMatrix4fv(self.line_program.get_uniform_location("view_matrix"),
                                1, GL_FALSE, self.view_matrix)
             glUniformMatrix4fv(self.line_program.get_uniform_location("projection_matrix"),
