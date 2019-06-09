@@ -15,6 +15,7 @@
 
 import collections
 import enum
+import struct
 
 import numpy
 
@@ -59,7 +60,7 @@ class StlParserError(RuntimeError):
         RuntimeError.__init__(self, "File '%s', line %s: %s" % (filename, line_no, msg))
 
 
-class StlAsciiFileParser:
+class StlFileParser:
     def __init__(self, filename):
         self.filename = filename
         self.line_no = 1
@@ -76,13 +77,54 @@ class StlAsciiFileParser:
         self.indices = []
         self.index = 0
 
-    @staticmethod
-    def _parse_vertex(line):
-        data = line.split(" ")[1:]
-        assert len(data) == 3, "Vertex requires 3 elements"
-        return float(data[0]), float(data[1]), float(data[2])
-
     def parse(self):
+        with open(self.filename, "rb") as f:
+            data = f.read(5)
+            f.seek(0)
+
+            if data == b"solid":
+                return self._parse_ascii(f)
+            else:
+                return self._parse_binary(f)
+
+    def _add_vertex(self, vertex, normal):
+        try:
+            self.indices.append(self.vertices[(vertex, normal)])
+        except KeyError:
+            self.vertices[(vertex, normal)] = self.index
+            self.indices.append(self.index)
+            self.index += 1
+
+    def _parse_binary(self, f):
+        header = f.read(80)  # header size
+
+        data = f.read(4)  # size of facet count field
+        count, = struct.unpack("<i", data)
+
+        facet_structure = "<ffffffffffffH"
+        size = struct.calcsize(facet_structure)
+
+        for facet in iter(lambda: f.read(size), b''):
+            result = struct.unpack(facet_structure, facet)
+
+            normal = result[0:3]
+            vertex1 = result[3:6]
+            vertex2 = result[6:9]
+            vertex3 = result[9:12]
+
+            self._add_vertex(vertex1, normal)
+            self._add_vertex(vertex2, normal)
+            self._add_vertex(vertex3, normal)
+
+            self.bb.update(vertex1)
+            self.bb.update(vertex2)
+            self.bb.update(vertex3)
+
+        return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
+            numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
+            numpy.array(self.indices, numpy.uint32), self.bb
+
+    def _parse_ascii(self, f):
         """
         :return: Tuple (vertices, normals, indices, bounding box)
         :raises AssertionError: Thrown when something mismatches the STL ASCII format
@@ -98,18 +140,17 @@ class StlAsciiFileParser:
                   StlParserState.VERTEX3: self._do_vertex3,
                   StlParserState.ENDLOOP: self._do_endloop}
 
-        with open(self.filename, "r") as f:
-            for line in f:
-                ln = line.strip()
+        for line in f:
+            ln = line.decode("ascii").strip()
 
-                if not states[self.parser_state](ln):
-                    break
+            if not states[self.parser_state](ln):
+                break
 
-                self.line_no += 1
+            self.line_no += 1
 
-            return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
-                numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
-                numpy.array(self.indices, numpy.uint32), self.bb
+        return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
+            numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
+            numpy.array(self.indices, numpy.uint32), self.bb
 
     def _do_start(self, line):
         assert line.startswith("solid"), "Expected keyword 'solid'"
@@ -146,6 +187,12 @@ class StlAsciiFileParser:
 
         return True
 
+    @staticmethod
+    def _parse_vertex(line):
+        data = line.split(" ")[1:]
+        assert len(data) == 3, "Vertex requires 3 elements"
+        return float(data[0]), float(data[1]), float(data[2])
+
     def _do_vertex1(self, line):
         assert line.startswith("vertex"), "Expected keyword 'vertex'"
 
@@ -176,14 +223,6 @@ class StlAsciiFileParser:
         self.bb.update(self.vertex3)
 
         return True
-
-    def _add_vertex(self, vertex, normal):
-        try:
-            self.indices.append(self.vertices[(vertex, normal)])
-        except KeyError:
-            self.vertices[(vertex, normal)] = self.index
-            self.indices.append(self.index)
-            self.index += 1
 
     def _do_endloop(self, line):
         assert line == "endfacet", "Expected keyword 'endfacet'"

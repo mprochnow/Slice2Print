@@ -86,7 +86,7 @@ class MainFrame(wx.Frame):
         with wx.FileDialog(self, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
                            style=wx.FD_FILE_MUST_EXIST) as dialog:
             if dialog.ShowModal() != wx.ID_CANCEL:
-                parser = model.StlAsciiFileParser(dialog.GetPath())
+                parser = model.StlFileParser(dialog.GetPath())
                 try:
                     vertices, normals, indices, bb = parser.parse()
 
