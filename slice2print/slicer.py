@@ -29,8 +29,8 @@ class Slicer:
 
     def slice(self, layer_height):
         """
-        :param layer_height:
-        :return:
+        :param layer_height: in mm (e.g. 0.2)
+        :return: Lists segments [((x1, y1, z1), (x2, y2, z1)), ((x3, y3, z2), (x4, y4, z2)), ...]
         """
         segments = []
 
@@ -48,30 +48,42 @@ class Slicer:
             for s in range(1, steps+1):
                 z = z_min + s * layer_height
 
-                points = []
-
-                if v1[2] < z < v2[2] or v1[2] > z > v2[2]:
-                    points.append(self._get_point_at_z(v1, v2, z))
-
-                if v1[2] < z < v3[2] or v1[2] > z > v3[2]:
-                    points.append(self._get_point_at_z(v1, v3, z))
-
-                if v2[2] < z < v3[2] or v2[2] > z > v3[2]:
-                    points.append(self._get_point_at_z(v2, v3, z))
-
-                if math.isclose(v1[2], z):
-                    points.append(tuple(v1))
-
-                if math.isclose(v2[2], z):
-                    points.append(tuple(v2))
-
-                if math.isclose(v3[2], z):
-                    points.append(tuple(v3))
+                points = self._find_intersection_points(v1, v2, v3, z)
 
                 if len(points) == 2:
                     segments.append(points)
 
         return segments
+
+    def _find_intersection_points(self, v1, v2, v3, z):
+        """
+        :param v1: 1st vertex of triangle
+        :param v2: 2nd vertex of triangle
+        :param v3: 3rd vertex of triangle
+        :param z: z-height
+        :return: List of points [(x1, y1, z), (x2, y2, z), ...]
+        """
+        points = []
+
+        if v1[2] < z < v2[2] or v1[2] > z > v2[2]:
+            points.append(self._get_point_at_z(v1, v2, z))
+
+        if v1[2] < z < v3[2] or v1[2] > z > v3[2]:
+            points.append(self._get_point_at_z(v1, v3, z))
+
+        if v2[2] < z < v3[2] or v2[2] > z > v3[2]:
+            points.append(self._get_point_at_z(v2, v3, z))
+
+        if math.isclose(v1[2], z):
+            points.append(tuple(v1))
+
+        if math.isclose(v2[2], z):
+            points.append(tuple(v2))
+
+        if math.isclose(v3[2], z):
+            points.append(tuple(v3))
+
+        return points
 
     @staticmethod
     def _get_point_at_z(p, q, z):
