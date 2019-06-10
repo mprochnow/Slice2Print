@@ -121,9 +121,6 @@ class ShaderProgram:
     def get_attrib_location(self, name):
         return glGetAttribLocation(self.program, name)
 
-    def get_uniform_location(self, name):
-        return glGetUniformLocation(self.program, name)
-
     def __enter__(self):
         glUseProgram(self.program)
 

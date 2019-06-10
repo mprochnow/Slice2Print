@@ -43,7 +43,7 @@ BASIC_FRAGMENT_SHADER = """
     void main() {
         frag_colour = color;
     }
-    """
+"""
 
 
 MODEL_VERTEX_SHADER = """
@@ -73,7 +73,7 @@ MODEL_VERTEX_SHADER = """
                      model_color[2] * light,
                      model_color[3]);
     }
-    """
+"""
 
 
 class ModelMesh:
@@ -81,7 +81,7 @@ class ModelMesh:
         """
         :param vertices: numpy.array() containing the vertices
         :param normals: numpy.array() containing the normals
-        :param indices:  numpy.array() containing the indices
+        :param indices: numpy.array() containing the indices
         :param bounding_box:  Instance of model.BoundingBox
         """
         self.program = ShaderProgram(MODEL_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
@@ -100,15 +100,15 @@ class ModelMesh:
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
 
-        vertex_position_index = self.program.get_attrib_location("vertex_position")
-        vertex_normal_index = self.program.get_attrib_location("vertex_normal")
-
         self.vertices = GlBuffer(vertices, GL_ARRAY_BUFFER)
         self.normals = GlBuffer(normals, GL_ARRAY_BUFFER)
         self.indices = GlBuffer(indices, GL_ELEMENT_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
+
+        vertex_position_index = self.program.get_attrib_location("vertex_position")
+        vertex_normal_index = self.program.get_attrib_location("vertex_normal")
 
         with self.vertices:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
@@ -134,7 +134,7 @@ class ModelMesh:
         """
         :param vertices: numpy.array() containing the vertices
         :param normals: numpy.array() containing the normals
-        :param indices:  numpy.array() containing the indices
+        :param indices: numpy.array() containing the indices
         :param bounding_box:  Instance of model.BoundingBox
         """
         self.vertices.set_data(vertices, GL_ARRAY_BUFFER)
@@ -215,8 +215,8 @@ class PlatformMesh:
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
         self.vertices = None
-        self.triangle_indices = None
-        self.line_indices = None
+        self.plane_indices = None
+        self.outline_indices = None
         self.vao = None
 
     def init(self):
@@ -225,16 +225,16 @@ class PlatformMesh:
         self.triangle_program = ShaderProgram(PLATFORM_VERTEX_SHADER, PLATFORM_FRAGMENT_SHADER)
         self.line_program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
 
-        vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
-
         self.vertices = GlBuffer()
-        self.triangle_indices = GlBuffer()
-        self.line_indices = GlBuffer()
+        self.plane_indices = GlBuffer()
+        self.outline_indices = GlBuffer()
 
         self.set_dimensions(self.dimensions)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
+
+        vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
 
         with self.vertices:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
@@ -242,6 +242,7 @@ class PlatformMesh:
 
         with self.line_program:
             self.line_program.model_color = self.line_color
+            self.line_program.model_matrix = self.model_matrix
 
     def update_view_matrix(self, matrix):
         self.view_matrix = matrix
@@ -259,24 +260,23 @@ class PlatformMesh:
 
             glBindVertexArray(self.vao)
 
-            with self.triangle_indices:
+            with self.plane_indices:
                 # Offset polygon rendering so that no flickering occurs when model is displayed on build platform
                 glPolygonOffset(-1.0, -1.0)
                 glEnable(GL_POLYGON_OFFSET_FILL)
 
-                glDrawElements(GL_TRIANGLES, len(self.triangle_indices), GL_UNSIGNED_INT, None)
+                glDrawElements(GL_TRIANGLES, len(self.plane_indices), GL_UNSIGNED_INT, None)
 
                 glDisable(GL_POLYGON_OFFSET_FILL)
 
         with self.line_program:
-            self.line_program.model_matrix = self.model_matrix
             self.line_program.view_matrix = self.view_matrix
             self.line_program.projection_matrix = self.projection_matrix
 
             glBindVertexArray(self.vao)
 
-            with self.line_indices:
-                glDrawElements(GL_LINES, len(self.line_indices), GL_UNSIGNED_INT, None)
+            with self.outline_indices:
+                glDrawElements(GL_LINES, len(self.outline_indices), GL_UNSIGNED_INT, None)
 
     def set_dimensions(self, dimensions):
         """
@@ -300,22 +300,22 @@ class PlatformMesh:
                                         3, 2, 4,
                                         3, 4, 5], numpy.uint32)
 
-        line_indices = numpy.array([0, 1,
-                                    0, 6,
-                                    1, 2,
-                                    1, 7,
-                                    2, 3,
-                                    2, 4,
-                                    3, 0,
-                                    3, 5,
-                                    4, 5,
-                                    4, 7,
-                                    5, 6,
-                                    6, 7], numpy.uint32)
+        outline_indices = numpy.array([0, 1,
+                                       0, 6,
+                                       1, 2,
+                                       1, 7,
+                                       2, 3,
+                                       2, 4,
+                                       3, 0,
+                                       3, 5,
+                                       4, 5,
+                                       4, 7,
+                                       5, 6,
+                                       6, 7], numpy.uint32)
 
         self.vertices.set_data(vertices, GL_ARRAY_BUFFER)
-        self.triangle_indices.set_data(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
-        self.line_indices.set_data(line_indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.plane_indices.set_data(triangle_indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.outline_indices.set_data(outline_indices, GL_ELEMENT_ARRAY_BUFFER)
 
 
 class LayerMesh:
@@ -325,11 +325,7 @@ class LayerMesh:
         self.bounding_box = bounding_box
 
         self.program = None
-        self.model_color_location = None
-        self.model_matrix_location = None
-        self.view_matrix_location = None
-        self.projection_matrix_location = None
-        self.vbo = None
+        self.buffer = None
         self.vao = None
 
         self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
@@ -348,15 +344,14 @@ class LayerMesh:
         self.initialized = True
 
         self.program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
-
-        self.vbo = GlBuffer(self.vertices, GL_ARRAY_BUFFER)
+        self.buffer = GlBuffer(self.vertices, GL_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
 
         vertex_position_index = self.program.get_attrib_location("vertex_position")
 
-        with self.vbo:
+        with self.buffer:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_position_index)
 
@@ -367,7 +362,7 @@ class LayerMesh:
             self.program.projection_matrix = self.projection_matrix
 
     def delete(self):
-        self.vbo.delete()
+        self.buffer.delete()
         glDeleteVertexArrays(1, [self.vao])
 
     def update_view_matrix(self, matrix):
@@ -386,5 +381,5 @@ class LayerMesh:
 
             glBindVertexArray(self.vao)
 
-            with self.vbo:
-                glDrawArrays(GL_LINES, 0, len(self.vbo))
+            with self.buffer:
+                glDrawArrays(GL_LINES, 0, len(self.buffer))

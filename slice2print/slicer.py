@@ -37,8 +37,8 @@ class Slicer:
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
 
-            z_min = min(v3[2], min(v2[2], min(v1[2], float("Inf"))))
-            z_max = max(v3[2], max(v2[2], max(v1[2], -float("Inf"))))
+            z_min = min(v3[2], min(v2[2], min(v1[2], 0)))
+            z_max = max(v3[2], max(v2[2], max(v1[2], 0)))
 
             z_min = math.floor(z_min / layer_height) * layer_height
             z_max = math.ceil(z_max / layer_height) * layer_height

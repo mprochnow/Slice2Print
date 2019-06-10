@@ -22,8 +22,8 @@ import numpy
 
 class BoundingBox:
     def __init__(self):
-        self.x_min = self.y_min = self.z_min = float("inf")
-        self.x_max = self.y_max = self.z_max = -float("inf")
+        self.x_min = self.y_min = self.z_min = 0
+        self.x_max = self.y_max = self.z_max = 0
 
     def update(self, vertex):
         """
@@ -48,7 +48,7 @@ class BoundingBox:
     x: %s, %s
     y: %s, %s
     z: %s, %s
-        """ % (self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
+""" % (self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
 
 StlParserState = enum.Enum("StlParserState",
@@ -78,6 +78,12 @@ class StlFileParser:
         self.index = 0
 
     def parse(self):
+        """
+        :return: Tuple (vertices, normals, indices, bounding box)
+        :raises AssertionError: Thrown when something mismatches the STL ASCII format
+        :raises ValueError: Thrown when vertices or normals cannot be parsed
+        :raises struct.error: Thrown when parsing of binary STL fails
+        """
         with open(self.filename, "rb") as f:
             data = f.read(5)
             f.seek(0)
@@ -96,13 +102,15 @@ class StlFileParser:
             self.index += 1
 
     def _parse_binary(self, f):
-        header = f.read(80)  # header size
-
-        data = f.read(4)  # size of facet count field
-        count, = struct.unpack("<i", data)
-
-        facet_structure = "<ffffffffffffH"
+        """
+        :param f: File handle
+        :return: Tuple (vertices, normals, indices, bounding box)
+        :raises struct.error: Thrown when parsing fails
+        """
+        facet_structure = "<12fH"
         size = struct.calcsize(facet_structure)
+
+        f.seek(80 + 4)  # Header size + size of facet count field
 
         for facet in iter(lambda: f.read(size), b''):
             result = struct.unpack(facet_structure, facet)
