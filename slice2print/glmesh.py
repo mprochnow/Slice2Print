@@ -95,7 +95,7 @@ class ModelMesh:
         self.model_matrix[3][2] = -bounding_box.z_min
 
         # OpenGL z-axis points in a different direction, so we have to flip the model
-        self.model_matrix = numpy.dot(self.model_matrix, rotate_x(-90))
+        self.model_matrix = numpy.matmul(self.model_matrix, rotate_x(-90))
 
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
@@ -338,7 +338,7 @@ class LayerMesh:
         self.model_matrix[3][2] = -bounding_box.z_min
 
         # OpenGL z-axis points in a different direction, so we have to flip the model
-        self.model_matrix = numpy.dot(self.model_matrix, rotate_x(-90))
+        self.model_matrix = numpy.matmul(self.model_matrix, rotate_x(-90))
 
     def init(self):
         self.initialized = True

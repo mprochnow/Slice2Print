@@ -79,12 +79,12 @@ class Camera:
         mr_x = glhelpers.rotate_x(self.pitch)
         mr_y = glhelpers.rotate_y(self.yaw)
 
-        return numpy.dot(mr_y, mr_x)
+        return numpy.matmul(mr_y, mr_x)
 
     def get_view_matrix(self):
         translation_matrix = glhelpers.translate([self.pos_x, self.pos_y, -self.camera_distance])
 
-        return numpy.dot(self._get_rotation_matrix(), translation_matrix)
+        return numpy.matmul(self._get_rotation_matrix(), translation_matrix)
 
     def view_all(self, bb):
         """

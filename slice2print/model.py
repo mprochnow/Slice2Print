@@ -22,8 +22,8 @@ import numpy
 
 class BoundingBox:
     def __init__(self):
-        self.x_min = self.y_min = self.z_min = 0
-        self.x_max = self.y_max = self.z_max = 0
+        self.x_min = self.y_min = self.z_min = float("inf")
+        self.x_max = self.y_max = self.z_max = float("-inf")
 
     def update(self, vertex):
         """
