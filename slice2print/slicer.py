@@ -15,6 +15,10 @@
 
 import math
 
+import numpy
+
+VERTEX_PRECISION = 1000.0
+
 
 class Slicer:
     def __init__(self, vertices, normals, indices):
@@ -23,8 +27,8 @@ class Slicer:
         :param normals: numpy.array() containing the normals
         :param indices:  numpy.array() containing the indices
         """
-        self.vertices = vertices
-        self.normals = normals
+        self.vertices = numpy.multiply(vertices, VERTEX_PRECISION).astype(numpy.int32)
+        self.normals = numpy.multiply(normals, VERTEX_PRECISION).astype(numpy.int32)
         self.indices = indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self, layer_height):
@@ -34,11 +38,13 @@ class Slicer:
         """
         segments = []
 
+        layer_height = int(layer_height * VERTEX_PRECISION)
+
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
 
-            z_min = min(v3[2], min(v2[2], min(v1[2], 0)))
-            z_max = max(v3[2], max(v2[2], max(v1[2], 0)))
+            z_min = min(v3[2], min(v2[2], min(v1[2], 2**31-1)))
+            z_max = max(v3[2], max(v2[2], max(v1[2], -(2**31-1))))
 
             z_min = math.floor(z_min / layer_height) * layer_height
             z_max = math.ceil(z_max / layer_height) * layer_height
@@ -74,13 +80,13 @@ class Slicer:
         if v2[2] < z < v3[2] or v2[2] > z > v3[2]:
             points.append(self._get_point_at_z(v2, v3, z))
 
-        if math.isclose(v1[2], z):
+        if v1[2] == z:
             points.append(tuple(v1))
 
-        if math.isclose(v2[2], z):
+        if v2[2] == z:
             points.append(tuple(v2))
 
-        if math.isclose(v3[2], z):
+        if v3[2] == z:
             points.append(tuple(v3))
 
         return points
@@ -91,7 +97,7 @@ class Slicer:
         Calculates point at z between p and q
         :param p: Vector P as tuple (x, y, z)
         :param q: Vector Q as tuple (x, y, z)
-        :param z: z as float
+        :param z: z
         :return: Calculated point as tuple (x, y, z)
         """
         # Vector form of the equation of a line
@@ -110,6 +116,6 @@ class Slicer:
 
         s = (z - p[2]) / (q[2] - p[2])
 
-        return (p[0] + s * (q[0] - p[0]),
-                p[1] + s * (q[1] - p[1]),
+        return (int(p[0] + s * (q[0] - p[0])),
+                int(p[1] + s * (q[1] - p[1])),
                 z)

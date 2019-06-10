@@ -116,6 +116,7 @@ class MainFrame(wx.Frame):
 
     def on_slice(self, event):
         segments = numpy.array(self.slicer.slice(0.2), numpy.float32).flatten()
+        segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
         self.notebook.SetSelection(1)
 
