@@ -86,25 +86,20 @@ class MainFrame(wx.Frame):
         with wx.FileDialog(self, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
                            style=wx.FD_FILE_MUST_EXIST) as dialog:
             if dialog.ShowModal() != wx.ID_CANCEL:
-                parser = model.StlFileParser(dialog.GetPath())
+                filename = dialog.GetPath()
                 try:
-                    vertices, normals, indices, bb = parser.parse()
-
                     self.notebook.SetSelection(0)
 
-                    self.model_view.set_model_mesh(glmesh.ModelMesh(vertices, normals, indices, bb))
+                    m = model.Model.from_file(filename)
+                    self.model_view.set_model_mesh(glmesh.ModelMesh(m))
                     self.model_view.view_all()
 
                     self.statusbar.SetStatusText(
-                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(bb.x_max-bb.x_min,
-                                                                         bb.y_max-bb.y_min,
-                                                                         bb.z_max-bb.z_min))
+                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*m.dimensions()))
 
-                    self.slicer = slicer.Slicer(vertices, indices, bb)
-                except (AssertionError, ValueError) as e:
-                    msg = "Error in line %s of %s:\n%s" % (parser.line_no, parser.filename, e)
-
-                    d = wx.MessageDialog(self, msg, "Error while open file", style=wx.OK | wx.ICON_ERROR)
+                    self.slicer = slicer.Slicer(m)
+                except Exception as e:
+                    d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
 
     def on_view_all(self, event):
@@ -115,10 +110,10 @@ class MainFrame(wx.Frame):
             self.layer_view.view_all()
 
     def on_slice(self, event):
+        self.notebook.SetSelection(1)
+
         segments = numpy.array(self.slicer.slice(0.2), numpy.float32).flatten()
         segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
-
-        self.notebook.SetSelection(1)
 
         self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model_view.model_mesh.bounding_box))
         self.layer_view.view_all()

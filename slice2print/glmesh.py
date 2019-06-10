@@ -77,22 +77,19 @@ MODEL_VERTEX_SHADER = """
 
 
 class ModelMesh:
-    def __init__(self, vertices, normals, indices, bounding_box):
+    def __init__(self, model):
         """
-        :param vertices: numpy.array() containing the vertices
-        :param normals: numpy.array() containing the normals
-        :param indices: numpy.array() containing the indices
-        :param bounding_box:  Instance of model.BoundingBox
+        :param model: Instance of model.Model
         """
         self.program = ShaderProgram(MODEL_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
-        self.bounding_box = bounding_box
+        self.bounding_box = model.bounding_box
 
         self.model_color = numpy.array([1.0, 0.5, 0.0, 1.0], numpy.float32)
 
         self.model_matrix = numpy.identity(4, numpy.float32)
-        self.model_matrix[3][0] = -(bounding_box.x_max+bounding_box.x_min) / 2
-        self.model_matrix[3][1] = -(bounding_box.y_max+bounding_box.y_min) / 2
-        self.model_matrix[3][2] = -bounding_box.z_min
+        self.model_matrix[3][0] = -(self.bounding_box.x_max+self.bounding_box.x_min) / 2
+        self.model_matrix[3][1] = -(self.bounding_box.y_max+self.bounding_box.y_min) / 2
+        self.model_matrix[3][2] = -self.bounding_box.z_min
 
         # OpenGL z-axis points in a different direction, so we have to flip the model
         self.model_matrix = numpy.matmul(self.model_matrix, rotate_x(-90))
@@ -100,9 +97,9 @@ class ModelMesh:
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
 
-        self.vertices = GlBuffer(vertices, GL_ARRAY_BUFFER)
-        self.normals = GlBuffer(normals, GL_ARRAY_BUFFER)
-        self.indices = GlBuffer(indices, GL_ELEMENT_ARRAY_BUFFER)
+        self.vertices = GlBuffer(model.vertices, GL_ARRAY_BUFFER)
+        self.normals = GlBuffer(model.normals, GL_ARRAY_BUFFER)
+        self.indices = GlBuffer(model.indices, GL_ELEMENT_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)

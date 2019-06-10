@@ -20,6 +20,33 @@ import struct
 import numpy
 
 
+class Model:
+    def __init__(self, vertices, normals, indices, bounding_box):
+        """
+        :param vertices: numpy.array() containing the vertices
+        :param normals: numpy.array() containing the normals
+        :param indices: numpy.array() containing the indices
+        :param bounding_box:  Instance of model.BoundingBox
+        """
+        self.vertices = vertices
+        self.normals = normals
+        self.indices = indices
+        self.bounding_box = bounding_box
+
+    def dimensions(self):
+        """
+        :return: Tuple (x, y, z)
+        """
+        return self.bounding_box.x_max-self.bounding_box.x_min, \
+            self.bounding_box.y_max-self.bounding_box.y_min, \
+            self.bounding_box.z_max-self.bounding_box.z_min
+
+    @classmethod
+    def from_file(cls, filename):
+        v, n, i, bb = StlFileParser(filename).parse()
+        return cls(v, n, i, bb)
+
+
 class BoundingBox:
     def __init__(self):
         self.x_min = self.y_min = self.z_min = float("inf")
@@ -42,13 +69,6 @@ class BoundingBox:
         """
         return numpy.subtract(numpy.array([self.x_min, self.y_min, self.z_min]),
                               numpy.array([self.x_max, self.y_max, self.z_max]))
-
-    def __str__(self):
-        return """Bounding box:
-    x: %s, %s
-    y: %s, %s
-    z: %s, %s
-""" % (self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
 
 StlParserState = enum.Enum("StlParserState",
