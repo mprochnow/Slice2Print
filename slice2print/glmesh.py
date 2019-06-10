@@ -100,11 +100,6 @@ class ModelMesh:
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
 
-        self.model_color_location = self.program.get_uniform_location("model_color")
-        self.model_matrix_location = self.program.get_uniform_location("model_matrix")
-        self.view_matrix_location = self.program.get_uniform_location("view_matrix")
-        self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
-
         vertex_position_index = self.program.get_attrib_location("vertex_position")
         vertex_normal_index = self.program.get_attrib_location("vertex_normal")
 
@@ -124,10 +119,10 @@ class ModelMesh:
             glEnableVertexAttribArray(vertex_normal_index)
 
         with self.program:
-            glUniform4fv(self.model_color_location, 1, self.model_color)
-            glUniformMatrix4fv(self.model_matrix_location, 1, GL_FALSE, self.model_matrix)
-            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+            self.program.model_color = self.model_color
+            self.program.model_matrix = self.model_matrix
+            self.program.view_matrix = self.view_matrix
+            self.program.projection_matrix = self.projection_matrix
 
     def delete(self):
         self.vertices.delete()
@@ -158,8 +153,8 @@ class ModelMesh:
 
     def draw(self):
         with self.program:
-            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+            self.program.view_matrix = self.view_matrix
+            self.program.projection_matrix = self.projection_matrix
 
             glBindVertexArray(self.vao)
 
@@ -231,7 +226,6 @@ class PlatformMesh:
         self.line_program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
 
         vertex_position_index = self.triangle_program.get_attrib_location("vertex_position")
-        model_color_location = self.line_program.get_uniform_location("model_color")
 
         self.vertices = GlBuffer()
         self.triangle_indices = GlBuffer()
@@ -247,7 +241,7 @@ class PlatformMesh:
             glEnableVertexAttribArray(vertex_position_index)
 
         with self.line_program:
-            glUniform4fv(model_color_location, 1, self.line_color)
+            self.line_program.model_color = self.line_color
 
     def update_view_matrix(self, matrix):
         self.view_matrix = matrix
@@ -260,12 +254,8 @@ class PlatformMesh:
             self.init()
 
         with self.triangle_program:
-            glUniformMatrix4fv(self.triangle_program.get_uniform_location("model_matrix"),
-                               1, GL_FALSE, self.model_matrix)
-            glUniformMatrix4fv(self.triangle_program.get_uniform_location("view_matrix"),
-                               1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.triangle_program.get_uniform_location("projection_matrix"),
-                               1, GL_FALSE, self.projection_matrix)
+            self.triangle_program.view_matrix = self.view_matrix
+            self.triangle_program.projection_matrix = self.projection_matrix
 
             glBindVertexArray(self.vao)
 
@@ -279,13 +269,9 @@ class PlatformMesh:
                 glDisable(GL_POLYGON_OFFSET_FILL)
 
         with self.line_program:
-            glUniform4fv(self.line_program.get_uniform_location("model_color"), 1, self.line_color)
-            glUniformMatrix4fv(self.line_program.get_uniform_location("model_matrix"),
-                               1, GL_FALSE, self.model_matrix)
-            glUniformMatrix4fv(self.line_program.get_uniform_location("view_matrix"),
-                               1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.line_program.get_uniform_location("projection_matrix"),
-                               1, GL_FALSE, self.projection_matrix)
+            self.line_program.model_matrix = self.model_matrix
+            self.line_program.view_matrix = self.view_matrix
+            self.line_program.projection_matrix = self.projection_matrix
 
             glBindVertexArray(self.vao)
 
@@ -363,11 +349,6 @@ class LayerMesh:
 
         self.program = ShaderProgram(BASIC_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
 
-        self.model_color_location = self.program.get_uniform_location("model_color")
-        self.model_matrix_location = self.program.get_uniform_location("model_matrix")
-        self.view_matrix_location = self.program.get_uniform_location("view_matrix")
-        self.projection_matrix_location = self.program.get_uniform_location("projection_matrix")
-
         self.vbo = GlBuffer(self.vertices, GL_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
@@ -380,10 +361,10 @@ class LayerMesh:
             glEnableVertexAttribArray(vertex_position_index)
 
         with self.program:
-            glUniform4fv(self.model_color_location, 1, self.model_color)
-            glUniformMatrix4fv(self.model_matrix_location, 1, GL_FALSE, self.model_matrix)
-            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+            self.program.model_color = self.model_color
+            self.program.model_matrix = self.model_matrix
+            self.program.view_matrix = self.view_matrix
+            self.program.projection_matrix = self.projection_matrix
 
     def delete(self):
         self.vbo.delete()
@@ -400,8 +381,8 @@ class LayerMesh:
             self.init()
 
         with self.program:
-            glUniformMatrix4fv(self.view_matrix_location, 1, GL_FALSE, self.view_matrix)
-            glUniformMatrix4fv(self.projection_matrix_location, 1, GL_FALSE, self.projection_matrix)
+            self.program.view_matrix = self.view_matrix
+            self.program.projection_matrix = self.projection_matrix
 
             glBindVertexArray(self.vao)
 

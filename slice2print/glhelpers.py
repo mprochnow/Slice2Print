@@ -94,6 +94,30 @@ class ShaderProgram:
             shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
         )
 
+        # max_index = int(glGetProgramiv(self.program, GL_ACTIVE_ATTRIBUTES))
+        # for i in range(max_index):
+        #     name, size, type = glGetActiveAttrib(self.program, i)
+        #     print("Attribute", i, name, size, type)
+
+        self.uniforms = dict()
+
+        for location in range(int(glGetProgramiv(self.program, GL_ACTIVE_UNIFORMS))):
+            uniform_name, size, uniform_type = glGetActiveUniform(self.program, location)
+            self.uniforms[uniform_name.decode("ascii")] = (location, uniform_type)
+
+    def __setattr__(self, name, value):
+        try:
+            location, uniform_type = self.uniforms[name]
+
+            if uniform_type == GL_FLOAT_MAT4:
+                glUniformMatrix4fv(location, 1, GL_FALSE, value)
+            elif uniform_type == GL_FLOAT_VEC4:
+                glUniform4fv(location, 1, value)
+            else:
+                raise RuntimeError("Uniform type %s not supported" % uniform_type)
+        except AttributeError:
+            object.__setattr__(self, name, value)
+
     def get_attrib_location(self, name):
         return glGetAttribLocation(self.program, name)
 
