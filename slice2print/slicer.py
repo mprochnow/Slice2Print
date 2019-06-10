@@ -36,28 +36,28 @@ class Slicer:
 
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
-    def slice(self, layer_height):
+    def slice(self, first_layer_height, layer_height):
         """
+        :param first_layer_height: in mm (e.g. 0.3)
         :param layer_height: in mm (e.g. 0.2)
         :return: Lists segments [((x1, y1, z1), (x2, y2, z1)), ((x3, y3, z2), (x4, y4, z2)), ...]
         """
         segments = []
 
+        first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
 
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
 
-            z_min = min(v3[2], min(v2[2], min(v1[2], 2**31-1)))
-            z_max = max(v3[2], max(v2[2], max(v1[2], -(2**31-1))))
+            z_min = min(v3[2], min(v2[2], v1[2]))
+            z_max = max(v3[2], max(v2[2], v1[2]))
 
-            z_min = math.floor(z_min / layer_height) * layer_height
-            z_max = math.ceil(z_max / layer_height) * layer_height
+            start = int((z_min - first_layer_height) / layer_height) + 1
+            end = int((z_max - first_layer_height) / layer_height) + 1
 
-            steps = int((z_max - z_min) / layer_height)
-
-            for s in range(1, steps+1):
-                z = z_min + s * layer_height
+            for s in range(start, end):
+                z = first_layer_height + s * layer_height
 
                 points = self._find_intersection_points(v1, v2, v3, z)
 

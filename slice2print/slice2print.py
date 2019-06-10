@@ -34,6 +34,7 @@ class MainFrame(wx.Frame):
         self.settings = settings.Settings()
         self.settings.load_from_file()
 
+        self.model = None
         self.slicer = None
 
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
@@ -90,14 +91,14 @@ class MainFrame(wx.Frame):
                 try:
                     self.notebook.SetSelection(0)
 
-                    m = model.Model.from_file(filename)
-                    self.model_view.set_model_mesh(glmesh.ModelMesh(m))
+                    self.model = model.Model.from_file(filename)
+                    self.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
                     self.model_view.view_all()
 
                     self.statusbar.SetStatusText(
-                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*m.dimensions()))
+                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions()))
 
-                    self.slicer = slicer.Slicer(m)
+                    self.slicer = slicer.Slicer(self.model)
                 except Exception as e:
                     d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
@@ -112,10 +113,11 @@ class MainFrame(wx.Frame):
     def on_slice(self, event):
         self.notebook.SetSelection(1)
 
-        segments = numpy.array(self.slicer.slice(0.2), numpy.float32).flatten()
+        segments = self.slicer.slice(0.3, 0.2)
+        segments = numpy.array(segments, numpy.float32).flatten()
         segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
-        self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model_view.model_mesh.bounding_box))
+        self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
         self.layer_view.view_all()
 
     def on_settings(self, event):
