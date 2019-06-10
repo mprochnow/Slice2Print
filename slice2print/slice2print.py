@@ -100,7 +100,7 @@ class MainFrame(wx.Frame):
                                                                          bb.y_max-bb.y_min,
                                                                          bb.z_max-bb.z_min))
 
-                    self.slicer = slicer.Slicer(vertices, normals, indices)
+                    self.slicer = slicer.Slicer(vertices, indices, bb)
                 except (AssertionError, ValueError) as e:
                     msg = "Error in line %s of %s:\n%s" % (parser.line_no, parser.filename, e)
 

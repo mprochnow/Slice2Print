@@ -21,14 +21,20 @@ VERTEX_PRECISION = 1000.0
 
 
 class Slicer:
-    def __init__(self, vertices, normals, indices):
+    def __init__(self, vertices, indices, bounding_box):
         """
         :param vertices: numpy.array() containing the vertices
-        :param normals: numpy.array() containing the normals
         :param indices:  numpy.array() containing the indices
         """
-        self.vertices = numpy.multiply(vertices, VERTEX_PRECISION).astype(numpy.int32)
-        self.normals = numpy.multiply(normals, VERTEX_PRECISION).astype(numpy.int32)
+        # center model and set its z_min to 0
+        t = numpy.array([-(bounding_box.x_max+bounding_box.x_min) / 2,
+                         -(bounding_box.y_max+bounding_box.y_min) / 2,
+                         -bounding_box.z_min], numpy.float32)
+
+        vertices = numpy.add(vertices, t)
+        vertices = numpy.multiply(vertices, VERTEX_PRECISION)
+        self.vertices = vertices.astype(numpy.int32)
+
         self.indices = indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self, layer_height):
