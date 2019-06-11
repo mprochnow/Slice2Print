@@ -20,11 +20,67 @@ import numpy
 VERTEX_PRECISION = 1000.0
 
 
+class Point2D:
+    __slots__ = ['x', 'y']
+
+    def __init__(self, x, y, _=None):
+        self.x = x
+        self.y = y
+
+
+class Segment2D:
+    __slots__ = ['p1', 'p2']
+
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+
+
+class Layer:
+    def __init__(self):
+        self.segments = []
+
+    def add_segment(self, segment):
+        self.segments.append(segment)
+
+    def __iter__(self):
+        yield from self.segments
+
+
+class SlicedModel:
+    def __init__(self, model_height, first_layer_height, layer_height):
+        self.first_layer_height = first_layer_height
+        self.layer_height = layer_height
+
+        layer_count = int((model_height - first_layer_height) / layer_height) + 1
+        self.layers = [Layer() for _ in range(layer_count)]
+
+    def add_segment_to_layer(self, segment, layer):
+        self.layers[layer].add_segment(segment)
+
+    def raw_data(self):
+        """
+        :return: Lists segments [((x1, y1, z1), (x2, y2, z1)), ((x3, y3, z2), (x4, y4, z2)), ...]
+        """
+        result = []
+
+        for i, layer in enumerate(self.layers):
+            z = self.first_layer_height + i * self.layer_height
+
+            for segment in layer:
+                result.append([(segment.p1.x, segment.p1.y, z),
+                               (segment.p2.x, segment.p2.y, z)])
+
+        return result
+
+
 class Slicer:
     def __init__(self, model):
         """
         :param vertices: Instance of model.Model
         """
+        self.model = model
+
         # center model and set its z_min to 0
         t = numpy.array([-(model.bounding_box.x_max+model.bounding_box.x_min) / 2,
                          -(model.bounding_box.y_max+model.bounding_box.y_min) / 2,
@@ -40,12 +96,13 @@ class Slicer:
         """
         :param first_layer_height: in mm (e.g. 0.3)
         :param layer_height: in mm (e.g. 0.2)
-        :return: Lists segments [((x1, y1, z1), (x2, y2, z1)), ((x3, y3, z2), (x4, y4, z2)), ...]
+        :return: Instance of SlicedModel
         """
-        segments = []
-
         first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
+
+        sliced_model = SlicedModel(self.model.dimensions()[2] * VERTEX_PRECISION,
+                                   first_layer_height, layer_height)
 
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
@@ -56,15 +113,15 @@ class Slicer:
             start = int((z_min - first_layer_height) / layer_height) + 1
             end = int((z_max - first_layer_height) / layer_height) + 1
 
-            for s in range(start, end):
-                z = first_layer_height + s * layer_height
+            for layer in range(start, end):
+                z = first_layer_height + layer * layer_height
 
                 points = self._find_intersection_points(v1, v2, v3, z)
 
                 if len(points) == 2:
-                    segments.append(points)
+                    sliced_model.add_segment_to_layer(Segment2D(*points), layer)
 
-        return segments
+        return sliced_model
 
     def _find_intersection_points(self, v1, v2, v3, z):
         """
@@ -86,13 +143,13 @@ class Slicer:
             points.append(self._get_point_at_z(v2, v3, z))
 
         if v1[2] == z:
-            points.append(tuple(v1))
+            points.append(Point2D(*v1))
 
         if v2[2] == z:
-            points.append(tuple(v2))
+            points.append(Point2D(*v2))
 
         if v3[2] == z:
-            points.append(tuple(v3))
+            points.append(Point2D(*v3))
 
         return points
 
@@ -100,10 +157,10 @@ class Slicer:
     def _get_point_at_z(p, q, z):
         """
         Calculates point at z between p and q
-        :param p: Vector P as tuple (x, y, z)
-        :param q: Vector Q as tuple (x, y, z)
+        :param p: Vector P as tuple (px, py, pz)
+        :param q: Vector Q as tuple (qx, qy, qz)
         :param z: z
-        :return: Calculated point as tuple (x, y, z)
+        :return: Calculated point as Point2D(x, y)
         """
         # Vector form of the equation of a line
         #     X = P + s * U with U = Q - P
@@ -121,6 +178,5 @@ class Slicer:
 
         s = (z - p[2]) / (q[2] - p[2])
 
-        return (int(p[0] + s * (q[0] - p[0])),
-                int(p[1] + s * (q[1] - p[1])),
-                z)
+        return Point2D(int(p[0] + s * (q[0] - p[0])),
+                       int(p[1] + s * (q[1] - p[1])))
