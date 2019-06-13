@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
+import collections
 
 import numpy
 
@@ -27,6 +27,16 @@ class Point2D:
         self.x = x
         self.y = y
 
+    def __str__(self):
+        return "Point2D(%s, %s)" % (self.x, self.y)
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
+
 
 class Segment2D:
     __slots__ = ['p1', 'p2']
@@ -35,13 +45,58 @@ class Segment2D:
         self.p1 = p1
         self.p2 = p2
 
+    def __str__(self):
+        return "Segment2D(%s - %s)" % (self.p1, self.p2)
+
+
+class Polygon2D:
+    def __init__(self):
+        self.points = []
+
+    def add_point(self, point):
+        self.points.append(point)
+
+    def __str__(self):
+        return "Polygon2D(%s)" % ", ".join([str(p) for p in self.points])
+
 
 class Layer:
     def __init__(self):
-        self.segments = []
+        self.segments = collections.deque()
+        self.polygons = []
 
     def add_segment(self, segment):
         self.segments.append(segment)
+
+    def make_polygons(self):
+        while len(self.segments):
+            polygon = Polygon2D()
+
+            segment = self.segments.popleft()
+            polygon.add_point(segment.p1)
+            polygon.add_point(segment.p2)
+
+            p = segment.p2
+
+            while p is not None:
+                for segment in self.segments:
+                    if segment.p1 == p:
+                        p = segment.p2
+                        polygon.add_point(p)
+
+                        self.segments.remove(segment)
+                        break
+
+                    if segment.p2 == p:
+                        p = segment.p1
+                        polygon.add_point(p)
+
+                        self.segments.remove(segment)
+                        break
+                else:
+                    p = None
+
+            self.polygons.append(polygon)
 
     def __iter__(self):
         yield from self.segments
@@ -65,11 +120,26 @@ class SlicedModel:
         result = []
 
         for i, layer in enumerate(self.layers):
+            layer.make_polygons()
+
+            # print(", ".join([str(p) for p in layer.polygons]))
+
             z = self.first_layer_height + i * self.layer_height
 
-            for segment in layer:
-                result.append([(segment.p1.x, segment.p1.y, z),
-                               (segment.p2.x, segment.p2.y, z)])
+            for polygon in layer.polygons:
+                p1 = p2 = None
+                for p in polygon.points:
+                    if p1 is None:
+                        p1 = p
+                    elif p2 is None:
+                        p2 = p
+                    else:
+                        p1 = p2
+                        p2 = p
+
+                    if p1 is not None and p2 is not None:
+                        result.append([[*p1, z],
+                                       [*p2, z]])
 
         return result
 
