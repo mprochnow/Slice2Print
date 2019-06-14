@@ -14,6 +14,7 @@
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
 import collections
+import math
 
 import numpy
 
@@ -180,8 +181,8 @@ class Slicer:
             z_min = min(v3[2], min(v2[2], v1[2]))
             z_max = max(v3[2], max(v2[2], v1[2]))
 
-            start = int((z_min - first_layer_height) / layer_height) + 1
-            end = int((z_max - first_layer_height) / layer_height) + 1
+            start = max(0, math.floor((z_min - first_layer_height) / layer_height) + 1)
+            end = math.floor((z_max - first_layer_height) / layer_height) + 1
 
             for layer in range(start, end):
                 z = first_layer_height + layer * layer_height
