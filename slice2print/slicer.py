@@ -53,9 +53,13 @@ class Segment2D:
 class Polygon2D:
     def __init__(self):
         self.points = []
+        self.closed = False
 
     def add_point(self, point):
         self.points.append(point)
+
+    def __len__(self):
+        return len(self.points)
 
     def __str__(self):
         return "Polygon2D(%s)" % ", ".join([str(p) for p in self.points])
@@ -97,7 +101,11 @@ class Layer:
                 else:
                     p = None
 
-            self.polygons.append(polygon)
+            if len(polygon) > 3:
+                if polygon.points[0] == polygon.points[-1]:
+                    polygon.closed = True
+
+                self.polygons.append(polygon)
 
     def __iter__(self):
         yield from self.segments
@@ -123,8 +131,6 @@ class SlicedModel:
         for i, layer in enumerate(self.layers):
             layer.make_polygons()
 
-            # print(", ".join([str(p) for p in layer.polygons]))
-
             z = self.first_layer_height + i * self.layer_height
 
             for polygon in layer.polygons:
@@ -148,7 +154,7 @@ class SlicedModel:
 class Slicer:
     def __init__(self, model):
         """
-        :param vertices: Instance of model.Model
+        :param model: Instance of model.Model
         """
         self.model = model
 
