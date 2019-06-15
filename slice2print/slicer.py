@@ -13,142 +13,11 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
-import collections
 import math
 
 import numpy
 
 VERTEX_PRECISION = 1000.0
-
-
-class Point2D:
-    __slots__ = ['x', 'y']
-
-    def __init__(self, x, y, _=None):
-        self.x = x
-        self.y = y
-
-    def __str__(self):
-        return "Point2D(%s, %s)" % (self.x, self.y)
-
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
-
-    def __iter__(self):
-        yield self.x
-        yield self.y
-
-
-class Segment2D:
-    __slots__ = ['p1', 'p2']
-
-    def __init__(self, p1, p2):
-        self.p1 = p1
-        self.p2 = p2
-
-    def __str__(self):
-        return "Segment2D(%s - %s)" % (self.p1, self.p2)
-
-
-class Polygon2D:
-    def __init__(self):
-        self.points = []
-        self.closed = False
-
-    def add_point(self, point):
-        self.points.append(point)
-
-    def __len__(self):
-        return len(self.points)
-
-    def __str__(self):
-        return "Polygon2D(%s)" % ", ".join([str(p) for p in self.points])
-
-
-class Layer:
-    def __init__(self):
-        self.segments = collections.deque()
-        self.polygons = []
-
-    def add_segment(self, segment):
-        self.segments.append(segment)
-
-    def make_polygons(self):
-        while len(self.segments):
-            polygon = Polygon2D()
-
-            segment = self.segments.popleft()
-            polygon.add_point(segment.p1)
-            polygon.add_point(segment.p2)
-
-            p = segment.p2
-
-            while p is not None:
-                for segment in self.segments:
-                    if segment.p1 == p:
-                        p = segment.p2
-                        polygon.add_point(p)
-
-                        self.segments.remove(segment)
-                        break
-
-                    if segment.p2 == p:
-                        p = segment.p1
-                        polygon.add_point(p)
-
-                        self.segments.remove(segment)
-                        break
-                else:
-                    p = None
-
-            if len(polygon) > 3:
-                if polygon.points[0] == polygon.points[-1]:
-                    polygon.closed = True
-
-                self.polygons.append(polygon)
-
-    def __iter__(self):
-        yield from self.segments
-
-
-class SlicedModel:
-    def __init__(self, model_height, first_layer_height, layer_height):
-        self.first_layer_height = first_layer_height
-        self.layer_height = layer_height
-
-        layer_count = int((model_height - first_layer_height) / layer_height) + 1
-        self.layers = [Layer() for _ in range(layer_count)]
-
-    def add_segment_to_layer(self, segment, layer):
-        self.layers[layer].add_segment(segment)
-
-    def raw_data(self):
-        """
-        :return: Lists segments [((x1, y1, z1), (x2, y2, z1)), ((x3, y3, z2), (x4, y4, z2)), ...]
-        """
-        result = []
-
-        for i, layer in enumerate(self.layers):
-            layer.make_polygons()
-
-            z = self.first_layer_height + i * self.layer_height
-
-            for polygon in layer.polygons:
-                p1 = p2 = None
-                for p in polygon.points:
-                    if p1 is None:
-                        p1 = p
-                    elif p2 is None:
-                        p2 = p
-                    else:
-                        p1 = p2
-                        p2 = p
-
-                    if p1 is not None and p2 is not None:
-                        result.append([[*p1, z],
-                                       [*p2, z]])
-
-        return result
 
 
 class Slicer:
@@ -178,9 +47,7 @@ class Slicer:
         first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
 
-        sliced_model = SlicedModel(self.model.dimensions()[2] * VERTEX_PRECISION,
-                                   first_layer_height, layer_height)
-
+        sliced_model = []
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
 
@@ -196,7 +63,7 @@ class Slicer:
                 points = self._find_intersection_points(v1, v2, v3, z)
 
                 if len(points) == 2:
-                    sliced_model.add_segment_to_layer(Segment2D(*points), layer)
+                    sliced_model.append(points)
 
         return sliced_model
 
@@ -220,13 +87,13 @@ class Slicer:
             points.append(self._get_point_at_z(v2, v3, z))
 
         if v1[2] == z:
-            points.append(Point2D(*v1))
+            points.append(v1)
 
         if v2[2] == z:
-            points.append(Point2D(*v2))
+            points.append(v2)
 
         if v3[2] == z:
-            points.append(Point2D(*v3))
+            points.append(v3)
 
         return points
 
@@ -255,5 +122,4 @@ class Slicer:
 
         s = (z - p[2]) / (q[2] - p[2])
 
-        return Point2D(int(p[0] + s * (q[0] - p[0])),
-                       int(p[1] + s * (q[1] - p[1])))
+        return int(p[0] + s * (q[0] - p[0])), int(p[1] + s * (q[1] - p[1])), z
