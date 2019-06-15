@@ -53,10 +53,10 @@ class MainFrame(wx.Frame):
 
         self.notebook = wx.Notebook(self)
         self.model_view = glview.GlCanvas(self.notebook)
-        self.layer_view = glview.GlCanvas(self.notebook)
+        # self.layer_view = glview.GlCanvas(self.notebook)
 
         self.notebook.AddPage(self.model_view, "3D Model")
-        self.notebook.AddPage(self.layer_view, "Sliced Model")
+        # self.notebook.AddPage(self.layer_view, "Sliced Model")
 
         sizer = wx.BoxSizer()
         sizer.Add(self.notebook, 1, wx.EXPAND)
@@ -78,7 +78,7 @@ class MainFrame(wx.Frame):
         self.Maximize(self.settings.app_window_maximized)
 
         self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
-        self.layer_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
+        # self.layer_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
 
     def on_exit(self, event):
         self.Close()
@@ -107,18 +107,21 @@ class MainFrame(wx.Frame):
         page = self.notebook.GetSelection()
         if page == 0:
             self.model_view.view_all()
-        elif page == 1:
-            self.layer_view.view_all()
+        # elif page == 1:
+        #     self.layer_view.view_all()
 
     def on_slice(self, event):
-        self.notebook.SetSelection(1)
+        # self.notebook.SetSelection(1)
 
         segments = self.slicer.slice(0.3, 0.2).raw_data()
         segments = numpy.array(segments, numpy.float32).flatten()
         segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
-        self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
-        self.layer_view.view_all()
+        self.model_view.set_layer_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
+        self.model_view.Refresh()
+
+        #self.layer_view.set_model_mesh()
+        #self.layer_view.view_all()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:
