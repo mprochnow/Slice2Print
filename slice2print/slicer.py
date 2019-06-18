@@ -32,12 +32,37 @@ class Vertex:
 
 
 class Edge:
-    def __init__(self, e1, e2):
-        self.e1 = e1
-        self.e2 = e2
+    def __init__(self, p, q):
+        self.p = p
+        self.q = q
+
+    def get_point_at_z(self, z):
+        """
+        Calculates point at z between p and q
+        :param z: z
+        :return: Calculated point as tuple(x, y)
+        """
+        # Vector form of the equation of a line
+        #     X = P + s * U with U = Q - P
+        #
+        # Parametric from of the equation of a line
+        #     x1 = p1 + s * u1 with u1 = q1 - p1
+        #     x2 = p2 + s * u2 with u2 = q2 - p2
+        #     x3 = p3 + s * u3 with u3 = q3 - p3
+        #
+        # Known values for variables
+        #     x3 = z, p3 = p.z, u3 = q.z - p.z
+        #
+        # s can be calculated
+        #     s = (z - p.z) / (q.z - p.z)
+
+        s = (z - self.p.z) / (self.q.z - self.p.z)
+
+        return int(self.p.x + s * (self.q.x - self.p.x)), \
+            int(self.p.y + s * (self.q.y - self.p.y))
 
     def __str__(self):
-        return "Edge(%s, %s)" % (self.e1, self.e2)
+        return "Edge(%s, %s)" % (self.p, self.q)
 
 
 class Triangle:
@@ -76,8 +101,38 @@ class Triangle:
         self.s3 = Edge(self.z_med, self.z_max)
 
     def get_forward_edge(self):
-        pass
-        # TODO
+        if self.z_min.flag == 0:
+            if self.z_max.flag == 1:
+                return self.s2, self.s3
+            elif self.z_max.flag == 2:
+                return self.s1, self.s1
+        elif self.z_min.flag == 1:
+            if self.z_max.flag == 0:
+                return self.s1, self.s1
+            elif self.z_max.flag == 2:
+                return self.s2, self.s3
+        elif self.z_min.flag == 2:
+            if self.z_max == 0:
+                return self.s2, self.s3
+            elif self.z_max == 1:
+                return self.s1, self.s1
+
+    def slice(self, first_layer_height, layer_height):
+        start = max(0, math.floor((self.z_min.z - first_layer_height) / layer_height) + 1)
+        middle = math.floor((self.z_med.z - first_layer_height) / layer_height) + 1
+        end = math.floor((self.z_max.z - first_layer_height) / layer_height) + 1
+
+        forward_edge1, forward_edge2 = self.get_forward_edge()
+
+        for layer in range(start, middle):
+            z = first_layer_height + layer * layer_height
+            x, y = forward_edge1.get_point_at_z(z)
+            # TODO
+
+        for layer in range(middle, end):
+            z = first_layer_height + layer * layer_height
+            x, y = forward_edge2.get_point_at_z(z)
+            # TODO
 
     def __str__(self):
         return "Triangle(%s, %s, %s)" % (self.z_min, self.z_med, self.z_max)
@@ -124,77 +179,3 @@ class Slicer:
 
             print(triangle)
 
-    #         z_min = min(v3[2], min(v2[2], v1[2]))
-    #         z_max = max(v3[2], max(v2[2], v1[2]))
-    #
-    #
-    #
-    #         start = max(0, math.floor((z_min - first_layer_height) / layer_height) + 1)
-    #         end = math.floor((z_max - first_layer_height) / layer_height) + 1
-    #
-    #         for layer in range(start, end):
-    #             z = first_layer_height + layer * layer_height
-    #
-    #             points = self._find_intersection_points(v1, v2, v3, z)
-    #
-    #             if len(points) == 2:
-    #                 sliced_model.append(points)
-    #
-    #     return []
-    #
-    # def _find_intersection_points(self, v1, v2, v3, z):
-    #     """
-    #     :param v1: 1st vertex of triangle
-    #     :param v2: 2nd vertex of triangle
-    #     :param v3: 3rd vertex of triangle
-    #     :param z: z-height
-    #     :return: List of points [(x1, y1, z), (x2, y2, z), ...]
-    #     """
-    #     points = []
-    #
-    #     if v1[2] < z < v2[2] or v1[2] > z > v2[2]:
-    #         points.append(self._get_point_at_z(v1, v2, z))
-    #
-    #     if v1[2] < z < v3[2] or v1[2] > z > v3[2]:
-    #         points.append(self._get_point_at_z(v1, v3, z))
-    #
-    #     if v2[2] < z < v3[2] or v2[2] > z > v3[2]:
-    #         points.append(self._get_point_at_z(v2, v3, z))
-    #
-    #     if v1[2] == z:
-    #         points.append(v1)
-    #
-    #     if v2[2] == z:
-    #         points.append(v2)
-    #
-    #     if v3[2] == z:
-    #         points.append(v3)
-    #
-    #     return points
-    #
-    # @staticmethod
-    # def _get_point_at_z(p, q, z):
-    #     """
-    #     Calculates point at z between p and q
-    #     :param p: Vector P as tuple (px, py, pz)
-    #     :param q: Vector Q as tuple (qx, qy, qz)
-    #     :param z: z
-    #     :return: Calculated point as Point2D(x, y)
-    #     """
-    #     # Vector form of the equation of a line
-    #     #     X = P + s * U with U = Q - P
-    #     #
-    #     # Parametric from of the equation of a line
-    #     #     x1 = p1 + s * u1 with u1 = q1 - p1
-    #     #     x2 = p2 + s * u2 with u2 = q2 - p2
-    #     #     x3 = p3 + s * u3 with u3 = q3 - p3
-    #     #
-    #     # Known values for variables
-    #     #     x3 = z, p3 = p[2], u3 = q[2] - p[2]
-    #     #
-    #     # s can be calculated
-    #     #     s = (z - p[2]) / (q[2] - p[2])
-    #
-    #     s = (z - p[2]) / (q[2] - p[2])
-    #
-    #     return int(p[0] + s * (q[0] - p[0])), int(p[1] + s * (q[1] - p[1])), z
