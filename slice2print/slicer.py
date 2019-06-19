@@ -21,11 +21,15 @@ VERTEX_PRECISION = 1000.0
 
 
 class Vertex:
-    def __init__(self, x, y, z, flag):
+    def __init__(self, x, y, z, flag=None):
         self.x = x
         self.y = y
         self.z = z
         self.flag = flag
+
+    def __eq__(self, other):
+        # We don't care about the flag here
+        return self.x == other.x and self.y == other.y and self.z == other.z
 
     def __str__(self):
         return "Vertex(%s, %s, %s)(%s)" % (self.x, self.y, self.z, self.flag)
@@ -33,6 +37,10 @@ class Vertex:
 
 class Edge:
     def __init__(self, p, q):
+        """
+        :param p: Instance of Vertex
+        :param q: Instance of Vertex
+        """
         self.p = p
         self.q = q
 
@@ -61,8 +69,20 @@ class Edge:
         return int(self.p.x + s * (self.q.x - self.p.x)), \
             int(self.p.y + s * (self.q.y - self.p.y))
 
+    def __eq__(self, other):
+        return self.p == other.p and self.q == other.q
+
     def __str__(self):
         return "Edge(%s, %s)" % (self.p, self.q)
+
+
+class Intersection:
+    def __init__(self, v_inter, e1, e2):
+        self.pre = None
+        self.v_inter = v_inter
+        self.e1 = e1
+        self.e2 = e2
+        self.next = None
 
 
 class Triangle:
@@ -84,58 +104,92 @@ class Triangle:
             self.v3 = Vertex(*v3, 0)
 
         if self.v1.z >= self.v2.z >= self.v3.z:
-            self.z_max, self.z_med, self.z_min = self.v1, self.v2, self.v3
+            self.vz_max, self.vz_med, self.vz_min = self.v1, self.v2, self.v3
         elif self.v1.z >= self.v3.z >= self.v2.z:
-            self.z_max, self.z_med, self.z_min = self.v1, self.v3, self.v2
+            self.vz_max, self.vz_med, self.vz_min = self.v1, self.v3, self.v2
         elif self.v2.z >= self.v1.z >= self.v3.z:
-            self.z_max, self.z_med, self.z_min = self.v2, self.v1, self.v3
+            self.vz_max, self.vz_med, self.vz_min = self.v2, self.v1, self.v3
         elif self.v2.z >= self.v3.z >= self.v1.z:
-            self.z_max, self.z_med, self.z_min = self.v2, self.v3, self.v1
+            self.vz_max, self.vz_med, self.vz_min = self.v2, self.v3, self.v1
         elif self.v3.z >= self.v1.z >= self.v2.z:
-            self.z_max, self.z_med, self.z_min = self.v3, self.v1, self.v2
+            self.vz_max, self.vz_med, self.vz_min = self.v3, self.v1, self.v2
         elif self.v3.z >= self.v2.z >= self.v1.z:
-            self.z_max, self.z_med, self.z_min = self.v3, self.v2, self.v1
+            self.vz_max, self.vz_med, self.vz_min = self.v3, self.v2, self.v1
 
-        self.s1 = Edge(self.z_min, self.z_max)
-        self.s2 = Edge(self.z_min, self.z_med)
-        self.s3 = Edge(self.z_med, self.z_max)
+        self.s1 = Edge(self.vz_min, self.vz_max)
+        self.s2 = Edge(self.vz_min, self.vz_med)
+        self.s3 = Edge(self.vz_med, self.vz_max)
 
     def get_forward_edge(self):
-        if self.z_min.flag == 0:
-            if self.z_max.flag == 1:
-                return self.s2, self.s3
-            elif self.z_max.flag == 2:
-                return self.s1, self.s1
-        elif self.z_min.flag == 1:
-            if self.z_max.flag == 0:
-                return self.s1, self.s1
-            elif self.z_max.flag == 2:
-                return self.s2, self.s3
-        elif self.z_min.flag == 2:
-            if self.z_max == 0:
-                return self.s2, self.s3
-            elif self.z_max == 1:
-                return self.s1, self.s1
+        """
+        :return: tuple (lower forward edge, upper forward edge, lower backward edge, upper backward edge)
+        """
+
+        if self.vz_min.flag == 0:
+            if self.vz_max.flag == 1:
+                return self.s2, self.s3, self.s1, self.s1
+            elif self.vz_max.flag == 2:
+                return self.s1, self.s1, self.s2, self.s3
+        elif self.vz_min.flag == 1:
+            if self.vz_max.flag == 0:
+                return self.s1, self.s1, self.s2, self.s3
+            elif self.vz_max.flag == 2:
+                return self.s2, self.s3, self.s1, self.s1
+        elif self.vz_min.flag == 2:
+            if self.vz_max.flag == 0:
+                return self.s2, self.s3, self.s1, self.s1
+            elif self.vz_max.flag == 1:
+                return self.s1, self.s1, self.s2, self.s3
 
     def slice(self, first_layer_height, layer_height):
-        start = max(0, math.floor((self.z_min.z - first_layer_height) / layer_height) + 1)
-        middle = math.floor((self.z_med.z - first_layer_height) / layer_height) + 1
-        end = math.floor((self.z_max.z - first_layer_height) / layer_height) + 1
+        """
+        Yields for each z plane intersection an instance of Intersection
+        :param first_layer_height: in mm * VERTEX_PRECISION
+        :param layer_height: in mm * VERTEX_PRECISION
+        """
+        start = max(0, math.floor((self.vz_min.z - first_layer_height) / layer_height) + 1)
+        middle = math.floor((self.vz_med.z - first_layer_height) / layer_height) + 1
+        end = math.floor((self.vz_max.z - first_layer_height) / layer_height) + 1
 
-        forward_edge1, forward_edge2 = self.get_forward_edge()
+        lower_forward_edge, upper_forward_edge, lower_backward_edge, upper_backward_edge = self.get_forward_edge()
 
         for layer in range(start, middle):
             z = first_layer_height + layer * layer_height
-            x, y = forward_edge1.get_point_at_z(z)
-            # TODO
+            x, y = lower_forward_edge.get_point_at_z(z)
+
+            yield Intersection(Vertex(x, y, z), lower_forward_edge, lower_backward_edge)
 
         for layer in range(middle, end):
             z = first_layer_height + layer * layer_height
-            x, y = forward_edge2.get_point_at_z(z)
-            # TODO
+            x, y = upper_forward_edge.get_point_at_z(z)
+
+            yield Intersection(Vertex(x, y, z), upper_forward_edge, upper_backward_edge)
 
     def __str__(self):
-        return "Triangle(%s, %s, %s)" % (self.z_min, self.z_med, self.z_max)
+        return "Triangle(%s, %s, %s)" % (self.vz_min, self.vz_med, self.vz_max)
+
+
+class IntersectionLinkedList:
+    def __init__(self):
+        self.first = None
+        self.last = None
+
+    def insert(self, intersection):
+        if self.first is None:
+            self.first = intersection
+            self.last = intersection
+
+            self.first.prev = self.last
+            self.first.next = self.last
+        elif intersection.e2 == self.first.e1:
+            intersection.prev = self.last
+            intersection.next = self.first
+            self.first = None
+            self.first = intersection
+
+        elif intersection.e1 == self.last.e2:
+            self.last.next = intersection
+            self.last = intersection
 
 
 class Slicer:
@@ -162,7 +216,7 @@ class Slicer:
         """
         :param first_layer_height: in mm (e.g. 0.3)
         :param layer_height: in mm (e.g. 0.2)
-        :return: Instance of SlicedModel
+        :return: TODO
         """
         first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
@@ -174,8 +228,9 @@ class Slicer:
 
             triangle = Triangle(v1, v2, v3, n)
 
-            if triangle.z_min == triangle.z_max:
+            if triangle.vz_min == triangle.vz_max:
                 continue
 
-            print(triangle)
+            for intersection in triangle.slice(first_layer_height, layer_height):
+                pass
 
