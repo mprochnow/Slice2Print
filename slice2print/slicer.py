@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
+import collections
 import math
 
 import numpy
@@ -78,11 +79,9 @@ class Edge:
 
 class Intersection:
     def __init__(self, v_inter, e1, e2):
-        self.pre = None
         self.v_inter = v_inter
         self.e1 = e1
         self.e2 = e2
-        self.next = None
 
 
 class Triangle:
@@ -169,27 +168,35 @@ class Triangle:
         return "Triangle(%s, %s, %s)" % (self.vz_min, self.vz_med, self.vz_max)
 
 
-class IntersectionLinkedList:
-    def __init__(self):
-        self.first = None
-        self.last = None
+class IntersectionList:
+    def __init__(self, first):
+        self.list = collections.deque()
+        self.list.append(first)
 
     def insert(self, intersection):
-        if self.first is None:
-            self.first = intersection
-            self.last = intersection
+        """
+        :param intersection: Instance of Intersection
+        :return: True if intersection was added to list else False
+        """
+        if intersection.e2 == self.list[0].e1:
+            self.list.appendleft(intersection)
+            return True
+        elif intersection.e1 == self.list[-1].e2:
+            self.list.append(intersection)
+            return True
 
-            self.first.prev = self.last
-            self.first.next = self.last
-        elif intersection.e2 == self.first.e1:
-            intersection.prev = self.last
-            intersection.next = self.first
-            self.first = None
-            self.first = intersection
+        return False
 
-        elif intersection.e1 == self.last.e2:
-            self.last.next = intersection
-            self.last = intersection
+
+class ContourList:
+    def __init__(self):
+        self.list = collections.deque()
+
+    def insert(self, intersection):
+        if len(self.list):
+            pass  # TODO
+        else:
+            self.list.append(IntersectionList(intersection))
 
 
 class Slicer:
@@ -232,5 +239,12 @@ class Slicer:
                 continue
 
             for intersection in triangle.slice(first_layer_height, layer_height):
-                pass
+                intersection
 
+
+if __name__ == "__main__":
+    import model
+
+    m = model.Model.from_file("../test.stl")
+    s = Slicer(m)
+    s.slice(0.3, 0.2)
