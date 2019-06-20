@@ -78,10 +78,14 @@ class Edge:
 
 
 class Intersection:
-    def __init__(self, v_inter, e1, e2):
+    """
+    Contains the intersection of a z plane with a triangle
+    and the two edges of the triangle which were intersected
+    """
+    def __init__(self, v_inter, forward_edge, backward_edge):
         self.v_inter = v_inter
-        self.e1 = e1
-        self.e2 = e2
+        self.forward_edge = forward_edge
+        self.backward_edge = backward_edge
 
 
 class Triangle:
@@ -143,8 +147,6 @@ class Triangle:
     def slice(self, first_layer_height, layer_height):
         """
         Yields for each z plane intersection an instance of Intersection
-        :param first_layer_height: in mm * VERTEX_PRECISION
-        :param layer_height: in mm * VERTEX_PRECISION
         """
         start = max(0, math.floor((self.vz_min.z - first_layer_height) / layer_height) + 1)
         middle = math.floor((self.vz_med.z - first_layer_height) / layer_height) + 1
@@ -169,19 +171,36 @@ class Triangle:
 
 
 class IntersectionList:
+    """
+    Contains the intersections of one layer
+    """
     def __init__(self, first):
         self.list = collections.deque()
         self.list.append(first)
 
-    def insert(self, intersection):
+    def check_backward_edge_and_add(self, intersection):
         """
+        Check if the backward edge of intersection is adjacent with the forward
+        edge of the first element in the list; if yes, add intersection as new
+        first element of the list
         :param intersection: Instance of Intersection
-        :return: True if intersection was added to list else False
+        :return: True if intersection was added else False
         """
-        if intersection.e2 == self.list[0].e1:
+        if intersection.backward_edge == self.list[0].forward_edge:
             self.list.appendleft(intersection)
             return True
-        elif intersection.e1 == self.list[-1].e2:
+
+        return False
+
+    def check_forward_edge_and_add(self, intersection):
+        """
+        Check if the forward edge of intersection is adjacent with the backward
+        edge of the last element in the list; if yes, add intersection as new
+        last element of the list
+        :param intersection: Instance of Intersection
+        :return: True if intersection was added else False
+        """
+        if intersection.forward_edge == self.list[-1].backward_edge:
             self.list.append(intersection)
             return True
 
@@ -189,14 +208,30 @@ class IntersectionList:
 
 
 class ContourList:
+    """
+    Contains the contour of one layer
+    """
     def __init__(self):
         self.list = collections.deque()
 
     def insert(self, intersection):
-        if len(self.list):
-            pass  # TODO
+        check_backward = False
+        check_forward = False
+
+        for intersection_list in self.list:
+            if intersection_list.check_backward_edge_and_add(intersection):
+                # intersection added to front of existing intersection list
+                # TODO check if this intersection list can be added to the back of another one
+                break
         else:
-            self.list.append(IntersectionList(intersection))
+            for intersection_list in self.list:
+                if intersection_list.check_forward_edge_and_add(intersection):
+                    # intersection added to back of existing intersection list
+                    # TODO check if this intersection list can be added to the front of another one
+                    break
+            else:
+                # intersection was not added to an existing intersection list so create a new one
+                self.list.append(IntersectionList(intersection))
 
 
 class Slicer:
@@ -227,6 +262,8 @@ class Slicer:
         """
         first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
+
+        # TODO structure needed which holds the contour for each layer
 
         sliced_model = []
         for i, j, k in self.indices:
