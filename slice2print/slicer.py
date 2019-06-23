@@ -33,7 +33,7 @@ class Vertex:
         return self.x == other.x and self.y == other.y and self.z == other.z
 
     def __str__(self):
-        return "Vertex(%s, %s, %s)(%s)" % (self.x, self.y, self.z, self.flag)
+        return "Vertex(x: %s, y: %s, z: %s, flag: %s)" % (self.x, self.y, self.z, self.flag)
 
 
 class Edge:
@@ -74,7 +74,7 @@ class Edge:
         return self.p == other.p and self.q == other.q
 
     def __str__(self):
-        return "Edge(%s, %s)" % (self.p, self.q)
+        return "Edge(p: %s, q: %s)" % (self.p, self.q)
 
 
 class Intersection:
@@ -167,7 +167,7 @@ class Triangle:
             yield Intersection(Vertex(x, y, z), upper_forward_edge, upper_backward_edge)
 
     def __str__(self):
-        return "Triangle(%s, %s, %s)" % (self.vz_min, self.vz_med, self.vz_max)
+        return "Triangle(v1: %s, v2: %s, v3: %s)" % (self.vz_min, self.vz_med, self.vz_max)
 
 
 class IntersectionList:
@@ -175,36 +175,60 @@ class IntersectionList:
     Contains the intersections of one layer
     """
     def __init__(self, first):
-        self.list = collections.deque()
-        self.list.append(first)
+        self.intersections = collections.deque()
+        self.intersections.append(first)
 
-    def check_backward_edge_and_add(self, intersection):
+    @property
+    def first(self):
+        return self.intersections[0]
+
+    @property
+    def last(self):
+        return self.intersections[-1]
+
+    def add_to_front(self, intersections):
+        self.intersections.extendleft(reversed(intersections))
+
+    def add_to_back(self, intersections):
+        self.intersections.extend(intersections)
+
+    def is_adjacent_to_first_element(self, intersection):
         """
-        Check if the backward edge of intersection is adjacent with the forward
-        edge of the first element in the list; if yes, add intersection as new
-        first element of the list
+        :param intersection: Instance if Intersection
+        :return: True if backward edge of intersection is adjacent to forward edge of first element
+        """
+        return intersection.backward_edge == self.first.forward_edge
+
+    def is_adjacent_to_last_element(self, intersection):
+        """
         :param intersection: Instance of Intersection
-        :return: True if intersection was added else False
+        :return: True if forward edge of intersection is adjacent to backward edge of last element
         """
-        if intersection.backward_edge == self.list[0].forward_edge:
-            self.list.appendleft(intersection)
-            return True
+        return intersection.forward_edge == self.last.backward_edge
 
-        return False
-
-    def check_forward_edge_and_add(self, intersection):
+    def add_to_front_if_adjacent(self, intersection):
         """
-        Check if the forward edge of intersection is adjacent with the backward
-        edge of the last element in the list; if yes, add intersection as new
-        last element of the list
+        If intersection is adjacent to first element, intersection is added as new first element
         :param intersection: Instance of Intersection
-        :return: True if intersection was added else False
+        :return: True if intersection was added
         """
-        if intersection.forward_edge == self.list[-1].backward_edge:
-            self.list.append(intersection)
-            return True
+        result = self.is_adjacent_to_first_element(intersection)
+        if result:
+            self.intersections.appendleft(intersection)
 
-        return False
+        return result
+
+    def add_to_back_if_adjacent(self, intersection):
+        """
+        If intersection is adjacent to last element, intersection is added as new last element
+        :param intersection: Instance of Intersection
+        :return: True if intersection was added
+        """
+        result = self.is_adjacent_to_last_element(intersection)
+        if result:
+            self.intersections.append(intersection)
+
+        return result
 
 
 class ContourList:
@@ -212,26 +236,38 @@ class ContourList:
     Contains the contour of one layer
     """
     def __init__(self):
-        self.list = collections.deque()
+        self.contour = collections.deque()
 
     def insert(self, intersection):
-        check_backward = False
-        check_forward = False
-
-        for intersection_list in self.list:
-            if intersection_list.check_backward_edge_and_add(intersection):
-                # intersection added to front of existing intersection list
-                # TODO check if this intersection list can be added to the back of another one
+        for intersection_list in self.contour:
+            if intersection_list.add_to_front_if_adjacent(intersection):
+                self.add_to_back_if_adjacent(intersection_list)
+                break
+            elif intersection_list.add_to_back_if_adjacent(intersection):
+                self.add_to_front_if_adjacent(intersection_list)
                 break
         else:
-            for intersection_list in self.list:
-                if intersection_list.check_forward_edge_and_add(intersection):
-                    # intersection added to back of existing intersection list
-                    # TODO check if this intersection list can be added to the front of another one
-                    break
-            else:
-                # intersection was not added to an existing intersection list so create a new one
-                self.list.append(IntersectionList(intersection))
+            # intersection was not added to an existing intersection list so create a new one
+            self.contour.append(IntersectionList(intersection))
+
+    def add_to_back_if_adjacent(self, intersection_list):
+        intersection = intersection_list.first
+
+        for contour_part in self.contour:
+            if contour_part.is_adjacent_to_last_element(intersection):
+                contour_part.add_to_back(intersection_list)
+                self.contour.remove(intersection_list)
+                break
+
+    def add_to_front_if_adjacent(self, intersection_list):
+        intersection = intersection_list.last
+
+        for contour_part in self.contour:
+            if contour_part.is_adjacent_to_first_element(intersection):
+                contour_part.add_to_front(intersection_list)
+                self.contour.remove(intersection_list)
+                break
+
 
 
 class Slicer:
