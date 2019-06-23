@@ -32,6 +32,11 @@ class Vertex:
         # We don't care about the flag here
         return self.x == other.x and self.y == other.y and self.z == other.z
 
+    def __iter__(self):
+        yield self.x
+        yield self.y
+        yield self.z
+
     def __str__(self):
         return "Vertex(x: %s, y: %s, z: %s, flag: %s)" % (self.x, self.y, self.z, self.flag)
 
@@ -82,10 +87,14 @@ class Intersection:
     Contains the intersection of a z plane with a triangle
     and the two edges of the triangle which were intersected
     """
-    def __init__(self, v_inter, forward_edge, backward_edge):
+    def __init__(self, v_inter, forward_edge, backward_edge, layer):
         self.v_inter = v_inter
         self.forward_edge = forward_edge
         self.backward_edge = backward_edge
+        self.layer = layer
+
+    def __str__(self):
+        return "Intersection(v_inter: %s, layer: %s)" % (self.v_inter, self.layer)
 
 
 class Triangle:
@@ -97,7 +106,7 @@ class Triangle:
         :param n: numpy.array([x, y, z])
         """
         # https://en.wikipedia.org/wiki/Back-face_culling
-        if numpy.dot(-v1, n) < 0 and not numpy.array_equal(n, [0, 1, 0]):
+        if numpy.dot(-v1, n) <= 0 and not numpy.array_equal(n, [0, 1, 0]):
             self.v1 = Vertex(*v1, 0)
             self.v2 = Vertex(*v2, 1)
             self.v3 = Vertex(*v3, 2)
@@ -149,8 +158,8 @@ class Triangle:
         Yields for each z plane intersection an instance of Intersection
         """
         start = max(0, math.floor((self.vz_min.z - first_layer_height) / layer_height) + 1)
-        middle = math.floor((self.vz_med.z - first_layer_height) / layer_height) + 1
-        end = math.floor((self.vz_max.z - first_layer_height) / layer_height) + 1
+        middle = max(0, math.floor((self.vz_med.z - first_layer_height) / layer_height) + 1)
+        end = max(0, math.floor((self.vz_max.z - first_layer_height) / layer_height) + 1)
 
         lower_forward_edge, upper_forward_edge, lower_backward_edge, upper_backward_edge = self.get_forward_edge()
 
@@ -158,16 +167,20 @@ class Triangle:
             z = first_layer_height + layer * layer_height
             x, y = lower_forward_edge.get_point_at_z(z)
 
-            yield Intersection(Vertex(x, y, z), lower_forward_edge, lower_backward_edge)
+            yield Intersection(Vertex(x, y, z), lower_forward_edge, lower_backward_edge, layer)
 
         for layer in range(middle, end):
             z = first_layer_height + layer * layer_height
             x, y = upper_forward_edge.get_point_at_z(z)
 
-            yield Intersection(Vertex(x, y, z), upper_forward_edge, upper_backward_edge)
+            yield Intersection(Vertex(x, y, z), upper_forward_edge, upper_backward_edge, layer)
 
     def __str__(self):
-        return "Triangle(v1: %s, v2: %s, v3: %s)" % (self.vz_min, self.vz_med, self.vz_max)
+        return """Triangle(
+    lower forward edge: %s,
+    upper forward edge: %s,
+    lower backward edge: %s,
+    upper backward edge: %s)""" % self.get_forward_edge()
 
 
 class IntersectionList:
@@ -187,10 +200,10 @@ class IntersectionList:
         return self.intersections[-1]
 
     def add_to_front(self, intersections):
-        self.intersections.extendleft(reversed(intersections))
+        self.intersections.extendleft(reversed(intersections.intersections))
 
     def add_to_back(self, intersections):
-        self.intersections.extend(intersections)
+        self.intersections.extend(intersections.intersections)
 
     def is_adjacent_to_first_element(self, intersection):
         """
@@ -238,7 +251,7 @@ class ContourList:
     def __init__(self):
         self.contour = collections.deque()
 
-    def insert(self, intersection):
+    def add(self, intersection):
         for intersection_list in self.contour:
             if intersection_list.add_to_front_if_adjacent(intersection):
                 self.add_to_back_if_adjacent(intersection_list)
@@ -268,6 +281,8 @@ class ContourList:
                 self.contour.remove(intersection_list)
                 break
 
+    def __str__(self):
+        return "Contour(# of intersection lists: %s)" % len(self.contour)
 
 
 class Slicer:
@@ -287,7 +302,6 @@ class Slicer:
         self.vertices = vertices.astype(numpy.int32)
 
         self.normals = model.normals.astype(numpy.int32)
-
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self, first_layer_height, layer_height):
@@ -296,23 +310,42 @@ class Slicer:
         :param layer_height: in mm (e.g. 0.2)
         :return: TODO
         """
+        slice_count = math.floor((self.model.dimensions.z - first_layer_height) / layer_height + 1)
+
         first_layer_height = int(first_layer_height * VERTEX_PRECISION)
         layer_height = int(layer_height * VERTEX_PRECISION)
 
-        # TODO structure needed which holds the contour for each layer
+        slices = []
+        for i in range(slice_count):
+            slices.append(ContourList())
 
-        sliced_model = []
         for i, j, k in self.indices:
             v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
             n = self.normals[i]  # all normals of a face are the same
 
             triangle = Triangle(v1, v2, v3, n)
 
-            if triangle.vz_min == triangle.vz_max:
-                continue
+            if triangle.vz_min.z != triangle.vz_max.z:
+                print(triangle)
+                for intersection in triangle.slice(first_layer_height, layer_height):
+                    slices[intersection.layer].add(intersection)
 
-            for intersection in triangle.slice(first_layer_height, layer_height):
-                intersection
+        sliced_model = []
+        for s in slices:
+            p1 = p2 = None
+            for i in s.contour[1].intersections:
+                if p1 is None:
+                    p1 = i
+                elif p2 is None:
+                    p2 = i
+                else:
+                    p1 = p2
+                    p2 = i
+
+                if p1 is not None and p2 is not None:
+                    sliced_model.append([[*p1.v_inter], [*p2.v_inter]])
+
+        return sliced_model
 
 
 if __name__ == "__main__":
@@ -320,4 +353,4 @@ if __name__ == "__main__":
 
     m = model.Model.from_file("../test.stl")
     s = Slicer(m)
-    s.slice(0.3, 0.2)
+    print(s.slice(0.3, 0.2))

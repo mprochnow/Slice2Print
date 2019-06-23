@@ -96,7 +96,7 @@ class MainFrame(wx.Frame):
                     self.model_view.view_all()
 
                     self.statusbar.SetStatusText(
-                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions()))
+                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
 
                     self.slicer = slicer.Slicer(self.model)
                 except Exception as e:

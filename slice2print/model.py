@@ -33,13 +33,16 @@ class Model:
         self.indices = indices
         self.bounding_box = bounding_box
 
+    @property
     def dimensions(self):
         """
         :return: Tuple (x, y, z)
         """
-        return self.bounding_box.x_max-self.bounding_box.x_min, \
-            self.bounding_box.y_max-self.bounding_box.y_min, \
-            self.bounding_box.z_max-self.bounding_box.z_min
+        Dimensions = collections.namedtuple("Dimensions", ["x", "y", "z"])
+
+        return Dimensions._make((self.bounding_box.x_max-self.bounding_box.x_min,
+                                 self.bounding_box.y_max-self.bounding_box.y_min,
+                                 self.bounding_box.z_max-self.bounding_box.z_min))
 
     @classmethod
     def from_file(cls, filename):
