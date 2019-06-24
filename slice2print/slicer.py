@@ -105,15 +105,9 @@ class Triangle:
         :param v3: numpy.array([x3, y3, z3])
         :param n: numpy.array([x, y, z])
         """
-        # https://en.wikipedia.org/wiki/Back-face_culling
-        if numpy.dot(-v1, n) <= 0 and not numpy.array_equal(n, [0, 1, 0]):
-            self.v1 = Vertex(*v1, 0)
-            self.v2 = Vertex(*v2, 1)
-            self.v3 = Vertex(*v3, 2)
-        else:
-            self.v1 = Vertex(*v1, 2)
-            self.v2 = Vertex(*v2, 1)
-            self.v3 = Vertex(*v3, 0)
+        self.v1 = Vertex(*v1, 0)
+        self.v2 = Vertex(*v2, 1)
+        self.v3 = Vertex(*v3, 2)
 
         if self.v1.z >= self.v2.z >= self.v3.z:
             self.vz_max, self.vz_med, self.vz_min = self.v1, self.v2, self.v3
@@ -267,6 +261,9 @@ class ContourList:
         intersection = intersection_list.first
 
         for contour_part in self.contour:
+            if contour_part == intersection_list:
+                continue
+
             if contour_part.is_adjacent_to_last_element(intersection):
                 contour_part.add_to_back(intersection_list)
                 self.contour.remove(intersection_list)
@@ -276,6 +273,9 @@ class ContourList:
         intersection = intersection_list.last
 
         for contour_part in self.contour:
+            if contour_part == intersection_list:
+                continue
+
             if contour_part.is_adjacent_to_first_element(intersection):
                 contour_part.add_to_front(intersection_list)
                 self.contour.remove(intersection_list)
@@ -316,34 +316,38 @@ class Slicer:
         layer_height = int(layer_height * VERTEX_PRECISION)
 
         slices = []
-        for i in range(slice_count):
+        for intersection in range(slice_count):
             slices.append(ContourList())
 
-        for i, j, k in self.indices:
-            v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
-            n = self.normals[i]  # all normals of a face are the same
+        for intersection, j, k in self.indices:
+            v1, v2, v3 = self.vertices[intersection], self.vertices[j], self.vertices[k]
+            n = self.normals[intersection]  # all normals of a face are the same
 
             triangle = Triangle(v1, v2, v3, n)
 
             if triangle.vz_min.z != triangle.vz_max.z:
-                print(triangle)
                 for intersection in triangle.slice(first_layer_height, layer_height):
                     slices[intersection.layer].add(intersection)
 
         sliced_model = []
-        for s in slices:
+        for slice in slices:
             p1 = p2 = None
-            for i in s.contour[1].intersections:
+            # TODO get all contours
+            for intersection in slice.contour[0].intersections:
                 if p1 is None:
-                    p1 = i
+                    p1 = intersection
                 elif p2 is None:
-                    p2 = i
+                    p2 = intersection
                 else:
                     p1 = p2
-                    p2 = i
+                    p2 = intersection
 
                 if p1 is not None and p2 is not None:
                     sliced_model.append([[*p1.v_inter], [*p2.v_inter]])
+
+            if len(slice.contour[0].intersections) > 2:
+                sliced_model.append([[*slice.contour[0].intersections[0].v_inter],
+                                     [*slice.contour[0].intersections[-1].v_inter]])
 
         return sliced_model
 
