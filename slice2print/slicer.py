@@ -331,23 +331,24 @@ class Slicer:
 
         sliced_model = []
         for slice in slices:
-            p1 = p2 = None
-            # TODO get all contours
-            for intersection in slice.contour[0].intersections:
-                if p1 is None:
-                    p1 = intersection
-                elif p2 is None:
-                    p2 = intersection
-                else:
-                    p1 = p2
-                    p2 = intersection
+            for contour in slice.contour:
+                p1 = p2 = None
 
-                if p1 is not None and p2 is not None:
-                    sliced_model.append([[*p1.v_inter], [*p2.v_inter]])
+                for intersection in contour.intersections:
+                    if p1 is None:
+                        p1 = intersection
+                    elif p2 is None:
+                        p2 = intersection
+                    else:
+                        p1 = p2
+                        p2 = intersection
 
-            if len(slice.contour[0].intersections) > 2:
-                sliced_model.append([[*slice.contour[0].intersections[0].v_inter],
-                                     [*slice.contour[0].intersections[-1].v_inter]])
+                    if p1 is not None and p2 is not None:
+                        sliced_model.append([[*p1.v_inter], [*p2.v_inter]])
+
+                if len(slice.contour[0].intersections) > 2:
+                    sliced_model.append([[*slice.contour[0].first.v_inter],
+                                         [*slice.contour[0].last.v_inter]])
 
         return sliced_model
 
