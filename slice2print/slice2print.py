@@ -117,9 +117,6 @@ class MainFrame(wx.Frame):
         segments = numpy.array(segments, numpy.float32).flatten()
         segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
-        # self.model_view.set_layer_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
-        # self.model_view.Refresh()
-
         self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
         self.layer_view.view_all()
 

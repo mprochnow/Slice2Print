@@ -187,6 +187,10 @@ class Intersections:
     def last(self):
         return self.intersections[-1]
 
+    @property
+    def closed(self):
+        return self.last.backward_edge == self.first.forward_edge
+
     def is_adjacent_to_first_element(self, intersection):
         """
         :param intersection: Instance if Intersection
@@ -237,6 +241,9 @@ class Intersections:
         """
         self.intersections.extend(intersections.intersections)
 
+    def __iter__(self):
+        yield from self.intersections
+
 
 class Contour:
     """
@@ -286,6 +293,9 @@ class Contour:
                 self.contour.remove(intersections_to_add)
                 break
 
+    def __iter__(self):
+        yield from self.contour
+
 
 class Slicer:
     def __init__(self, model):
@@ -303,14 +313,13 @@ class Slicer:
         vertices = numpy.multiply(vertices, VERTEX_PRECISION)
         self.vertices = vertices.astype(numpy.int32)
 
-        self.normals = model.normals.astype(numpy.int32)
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self, first_layer_height, layer_height):
         """
         :param first_layer_height: in mm (e.g. 0.3)
         :param layer_height: in mm (e.g. 0.2)
-        :return: list [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
+        :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
         """
         slice_count = math.floor((self.model.dimensions.z - first_layer_height) / layer_height + 1)
 
@@ -331,11 +340,11 @@ class Slicer:
                     slices[intersection.layer].add(intersection)
 
         sliced_model = []
-        for slice in slices:
-            for contour in slice.contour:
+        for contour in slices:
+            for intersections in contour:
                 p1 = p2 = None
 
-                for intersection in contour.intersections:
+                for intersection in intersections:
                     if p1 is None:
                         p1 = intersection
                     elif p2 is None:
@@ -347,9 +356,9 @@ class Slicer:
                     if p1 is not None and p2 is not None:
                         sliced_model.append([[*p1.intersection], [*p2.intersection]])
 
-                if len(slice.contour[0].intersections) > 2:
-                    sliced_model.append([[*slice.contour[0].first.intersection],
-                                         [*slice.contour[0].last.intersection]])
+                if intersections.closed:
+                    sliced_model.append([[*intersections.last.intersection],
+                                         [*intersections.first.intersection]])
 
         return sliced_model
 
