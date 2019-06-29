@@ -21,17 +21,19 @@ import numpy
 
 
 class Model:
-    def __init__(self, vertices, normals, indices, bounding_box):
+    def __init__(self, vertices, normals, indices, bounding_box, facet_count):
         """
         :param vertices: numpy.array() containing the vertices
         :param normals: numpy.array() containing the normals
         :param indices: numpy.array() containing the indices
         :param bounding_box:  Instance of model.BoundingBox
+        :param facet_count: Number of facets in model
         """
         self.vertices = vertices
         self.normals = normals
         self.indices = indices
         self.bounding_box = bounding_box
+        self.facet_count = facet_count
 
     @property
     def dimensions(self):
@@ -46,8 +48,7 @@ class Model:
 
     @classmethod
     def from_file(cls, filename):
-        v, n, i, bb = StlFileParser(filename).parse()
-        return cls(v, n, i, bb)
+        return cls(*StlFileParser(filename).parse())
 
 
 class BoundingBox:
@@ -99,6 +100,8 @@ class StlFileParser:
         self.vertices = collections.OrderedDict()  # key: (vertex, normal), value: index
         self.indices = []
         self.index = 0
+
+        self.facet_count = 0
 
     def parse(self):
         """
@@ -154,13 +157,15 @@ class StlFileParser:
             self._add_vertex(vertex2, normal)
             self._add_vertex(vertex3, normal)
 
+            self.facet_count += 1
+
             self.bb.update(vertex1)
             self.bb.update(vertex2)
             self.bb.update(vertex3)
 
         return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
             numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array(self.indices, numpy.uint32), self.bb
+            numpy.array(self.indices, numpy.uint32), self.bb, self.facet_count
 
     def _parse_ascii(self, f):
         """
@@ -188,7 +193,7 @@ class StlFileParser:
 
         return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
             numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array(self.indices, numpy.uint32), self.bb
+            numpy.array(self.indices, numpy.uint32), self.bb, self.facet_count
 
     def _do_start(self, line):
         assert line.startswith("solid"), "Expected keyword 'solid'"
@@ -262,6 +267,8 @@ class StlFileParser:
         self._add_vertex(self.vertex1, self.normal)
         self._add_vertex(self.vertex2, self.normal)
         self._add_vertex(self.vertex3, self.normal)
+
+        self.facet_count += 1
 
         self.bb.update(self.vertex1)
         self.bb.update(self.vertex2)
