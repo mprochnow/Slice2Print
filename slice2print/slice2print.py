@@ -108,9 +108,10 @@ class MainFrame(wx.Frame):
         if page == 0:
             self.model_view.view_all()
         elif page == 1:
-             self.layer_view.view_all()
+            self.layer_view.view_all()
 
     def on_slice(self, event):
+        self.layer_view.set_model_mesh(None)
         self.notebook.SetSelection(1)
 
         segments = self.slicer.slice(0.3, 0.2)

@@ -121,7 +121,6 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.initialized = False
         self.platform_mesh = None
         self.model_mesh = None
-        self.layer_mesh = None
         self.camera = Camera()
 
         self.mouse_x = 0
@@ -145,11 +144,6 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.model_mesh.delete()
         self.model_mesh = model_mesh
 
-    def set_layer_mesh(self, layer_mesh):
-        if self.layer_mesh:
-            self.layer_mesh.delete()
-        self.layer_mesh = layer_mesh
-
     def view_all(self):
         if self.model_mesh:
             self.camera.view_all(self.model_mesh.bounding_box)
@@ -164,21 +158,11 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             glPolygonOffset(1.0, 1.0)
             glEnable(GL_POLYGON_OFFSET_FILL)
 
-            # glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-
             self.model_mesh.update_projection_matrix(self.camera.get_projection_matrix())
             self.model_mesh.update_view_matrix(self.camera.get_view_matrix())
             self.model_mesh.draw()
 
-            # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
             glDisable(GL_POLYGON_OFFSET_FILL)
-
-        if self.layer_mesh:
-
-            self.layer_mesh.update_projection_matrix(self.camera.get_projection_matrix())
-            self.layer_mesh.update_view_matrix(self.camera.get_view_matrix())
-            self.layer_mesh.draw()
 
         if self.platform_mesh:
             self.platform_mesh.update_projection_matrix(self.camera.get_projection_matrix())

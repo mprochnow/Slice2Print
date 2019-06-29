@@ -143,6 +143,13 @@ class StlFileParser:
             vertex2 = result[6:9]
             vertex3 = result[9:12]
 
+            if normal == (0.0, 0.0, 0.0):
+                v1 = numpy.array(vertex1)
+                v2 = numpy.array(vertex2)
+                v3 = numpy.array(vertex3)
+                n = numpy.cross(v2-v1, v3-v1)
+                normal = tuple(n / n.sum())
+
             self._add_vertex(vertex1, normal)
             self._add_vertex(vertex2, normal)
             self._add_vertex(vertex3, normal)
@@ -244,6 +251,13 @@ class StlFileParser:
         assert line == "endloop", "Expected keyword 'endloop'"
 
         self.parser_state = StlParserState.ENDLOOP
+
+        if self.normal == (0.0, 0.0, 0.0):
+            v1 = numpy.array(self.vertex1)
+            v2 = numpy.array(self.vertex2)
+            v3 = numpy.array(self.vertex3)
+            n = numpy.cross(v2 - v1, v3 - v1)
+            self.normal = tuple(n / n.sum())
 
         self._add_vertex(self.vertex1, self.normal)
         self._add_vertex(self.vertex2, self.normal)
