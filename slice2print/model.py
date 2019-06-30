@@ -111,10 +111,12 @@ class StlFileParser:
         :raises struct.error: Thrown when parsing of binary STL fails
         """
         with open(self.filename, "rb") as f:
-            data = f.read(5)
+            ln1 = f.readline().strip()
+            ln2 = f.readline().strip()
+
             f.seek(0)
 
-            if data == b"solid":
+            if ln1.startswith(b"solid") and ln2.startswith(b"facet"):
                 return self._parse_ascii(f)
             else:
                 return self._parse_binary(f)
