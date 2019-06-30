@@ -18,6 +18,7 @@ import ctypes
 import numpy
 import wx
 
+import dialog
 import glmesh
 import glview
 import icons
@@ -35,7 +36,6 @@ class MainFrame(wx.Frame):
         self.settings.load_from_file()
 
         self.model = None
-        self.slicer = None
 
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
         self.SetMinSize((640, 480))
@@ -97,8 +97,6 @@ class MainFrame(wx.Frame):
 
                     self.statusbar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
-
-                    self.slicer = slicer.Slicer(self.model)
                 except Exception as e:
                     d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
@@ -111,15 +109,18 @@ class MainFrame(wx.Frame):
             self.layer_view.view_all()
 
     def on_slice(self, event):
-        self.layer_view.set_model_mesh(None)
-        self.notebook.SetSelection(1)
+        dlg = dialog.SlicerDialog(self, self.model, 0.3, 0.2)
+        if dlg.slice_model() == wx.ID_OK:
+            segments = dlg.get_sliced_model()
+            segments = numpy.array(segments, numpy.float32).flatten()
+            segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
-        segments = self.slicer.slice(0.3, 0.2)
-        segments = numpy.array(segments, numpy.float32).flatten()
-        segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
+            self.notebook.SetSelection(1)
 
-        self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
-        self.layer_view.view_all()
+            self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
+            self.layer_view.view_all()
+
+        dlg.Destroy()
 
     def on_settings(self, event):
         with settingsdialog.SettingsDialog(self) as dialog:

@@ -298,11 +298,23 @@ class Contour:
 
 
 class Slicer:
-    def __init__(self, model):
+    def __init__(self, model, first_layer_height, layer_height, update_func=None, update_interval=None):
         """
         :param model: Instance of model.Model
+        :param first_layer_height: in mm (e.g. 0.3)
+        :param layer_height: in mm (e.g. 0.2)
         """
+        self.cancelled = False
         self.model = model
+        self.first_layer_height = first_layer_height
+        self.layer_height = layer_height
+        self.update_func = update_func
+        self.update_interval = update_interval
+
+        self.slice_count = math.floor((self.model.dimensions.z - self.first_layer_height) / self.layer_height + 1)
+        self.slices = []
+        for intersection in range(self.slice_count):
+            self.slices.append(Contour())
 
         # center model and set its z_min to 0
         t = numpy.array([-(model.bounding_box.x_max+model.bounding_box.x_min) / 2,
@@ -315,32 +327,32 @@ class Slicer:
 
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
-    def slice(self, first_layer_height, layer_height):
-        """
-        :param first_layer_height: in mm (e.g. 0.3)
-        :param layer_height: in mm (e.g. 0.2)
-        :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
-        """
-        slice_count = math.floor((self.model.dimensions.z - first_layer_height) / layer_height + 1)
+    def slice(self):
+        first_layer_height = int(self.first_layer_height * VERTEX_PRECISION)
+        layer_height = int(self.layer_height * VERTEX_PRECISION)
 
-        first_layer_height = int(first_layer_height * VERTEX_PRECISION)
-        layer_height = int(layer_height * VERTEX_PRECISION)
-
-        slices = []
-        for intersection in range(slice_count):
-            slices.append(Contour())
-
-        for intersection, j, k in self.indices:
-            v1, v2, v3 = self.vertices[intersection], self.vertices[j], self.vertices[k]
+        triangle_no = 0
+        for i, j, k in self.indices:
+            triangle_no += 1
+            v1, v2, v3 = self.vertices[i], self.vertices[j], self.vertices[k]
 
             triangle = Triangle(v1, v2, v3)
 
             if triangle.vz_min.z != triangle.vz_max.z:
                 for intersection in triangle.slice(first_layer_height, layer_height):
-                    slices[intersection.layer].add(intersection)
+                    self.slices[intersection.layer].add(intersection)
 
+                if self.update_func is not None and triangle_no % self.update_interval == 0:
+                    self.cancelled = self.update_func()
+                    if self.cancelled:
+                        break
+
+    def get_sliced_model(self):
+        """
+        :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
+        """
         sliced_model = []
-        for contour in slices:
+        for contour in self.slices:
             for intersections in contour:
                 p1 = p2 = None
 
@@ -367,5 +379,6 @@ if __name__ == "__main__":
     import model
 
     m = model.Model.from_file("../test.stl")
-    s = Slicer(m)
-    print(s.slice(0.3, 0.2))
+    s = Slicer(m, 0.3, 0.2)
+    s.slice()
+    print(s.get_sliced_model())
