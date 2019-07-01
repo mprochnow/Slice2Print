@@ -101,9 +101,11 @@ class ShaderProgram:
 
         self.uniforms = dict()
 
-        for location in range(int(glGetProgramiv(self.program, GL_ACTIVE_UNIFORMS))):
-            uniform_name, size, uniform_type = glGetActiveUniform(self.program, location)
-            self.uniforms[uniform_name.decode("ascii")] = (location, uniform_type)
+        for index in range(int(glGetProgramiv(self.program, GL_ACTIVE_UNIFORMS))):
+            uniform_name, size, uniform_type = glGetActiveUniform(self.program, index)
+            uniform_name = uniform_name.decode("ascii")
+            location = glGetUniformLocation(self.program, uniform_name)
+            self.uniforms[uniform_name] = (location, uniform_type)
 
     def __setattr__(self, name, value):
         try:
