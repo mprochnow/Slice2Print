@@ -25,7 +25,6 @@ import icons
 import model
 import slicer
 import settings
-import settingsdialog
 
 
 class MainFrame(wx.Frame):
@@ -109,25 +108,23 @@ class MainFrame(wx.Frame):
             self.layer_view.view_all()
 
     def on_slice(self, event):
-        dlg = dialog.SlicerDialog(self, self.model, 0.3, 0.2)
-        if dlg.slice_model() == wx.ID_OK:
-            segments = dlg.get_sliced_model()
-            segments = numpy.array(segments, numpy.float32).flatten()
-            segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
+        with dialog.SlicerDialog(self, self.model, 0.3, 0.2) as dlg:
+            if dlg.slice_model() == wx.ID_OK:
+                segments = dlg.get_sliced_model()
+                segments = numpy.array(segments, numpy.float32).flatten()
+                segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
 
-            self.notebook.SetSelection(1)
+                self.notebook.SetSelection(1)
 
-            self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
-            self.layer_view.view_all()
-
-        dlg.Destroy()
+                self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
+                self.layer_view.view_all()
 
     def on_settings(self, event):
-        with settingsdialog.SettingsDialog(self) as dialog:
-            dialog.set_build_volume(self.settings.build_volume)
+        with dialog.SettingsDialog(self) as dlg:
+            dlg.set_build_volume(self.settings.build_volume)
 
-            if dialog.ShowModal() != wx.ID_CANCEL:
-                build_volume = dialog.get_build_volume()
+            if dlg.ShowModal() != wx.ID_CANCEL:
+                build_volume = dlg.get_build_volume()
                 self.settings.build_volume = build_volume
 
                 self.model_view.platform_mesh.set_dimensions(build_volume)
