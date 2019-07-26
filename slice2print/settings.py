@@ -11,10 +11,16 @@ DEFAULT_SETTINGS = {
             "maximized": False
         }
     },
-    "build_volume": {
-        "x": 200,
-        "y": 200,
-        "z": 200
+    "printer": {
+        "build_volume": {
+            "x": 200,
+            "y": 200,
+            "z": 200
+        }
+    },
+    "print_options": {
+        "first_layer_height": 0.2,
+        "layer_height": 0.2
     }
 }
 
@@ -62,8 +68,11 @@ class Settings:
 
         settings = dict()
 
-        settings["build_volume"] = dict()
-        settings["build_volume"]["x"], settings["build_volume"]["y"], settings["build_volume"]["z"] = self.build_volume
+        settings["printer"] = dict()
+        settings["printer"]["build_volume"] = dict()
+        settings["printer"]["build_volume"]["x"], \
+            settings["printer"]["build_volume"]["y"], \
+            settings["printer"]["build_volume"]["z"] = self.build_volume
 
         settings["application"] = dict()
         settings["application"]["window"] = dict()
@@ -79,7 +88,8 @@ class Settings:
         Falls back to default values in case of an error
         :return: Build volume dimensions as tuple (x, y, z)
         """
-        build_volume = self.settings.get("build_volume", DEFAULT_SETTINGS["build_volume"])
+        printer = self.settings.get("printer", DEFAULT_SETTINGS["printer"])
+        build_volume = printer.get("build_volume", DEFAULT_SETTINGS["printer"]["build_volume"])
 
         try:
             assert isinstance(build_volume["x"], (int, float)) and \
@@ -88,7 +98,7 @@ class Settings:
 
             assert build_volume["x"] > 0 and build_volume["y"] > 0 and build_volume["z"] > 0
         except (AssertionError, KeyError):
-            build_volume = DEFAULT_SETTINGS["build_volume"]
+            build_volume = DEFAULT_SETTINGS["printer"]["build_volume"]
 
         return build_volume["x"], build_volume["y"], build_volume["z"]
 
@@ -98,9 +108,14 @@ class Settings:
         :param dimensions: Build volume dimensions as tuple (x, y, z)
         """
         try:
-            build_volume = self.settings["build_volume"]
+            printer = self.settings["printer"]
         except KeyError:
-            build_volume = self.settings["build_volume"] = copy.deepcopy(DEFAULT_SETTINGS["build_volume"])
+            printer = self.settings["printer"] = copy.deepcopy(DEFAULT_SETTINGS["printer"])
+
+        try:
+            build_volume = printer["build_volume"]
+        except KeyError:
+            build_volume = self.settings["printer"]["build_volume"] = copy.deepcopy(DEFAULT_SETTINGS["printer"]["build_volume"])
 
         build_volume["x"] = dimensions[0]
         build_volume["y"] = dimensions[1]
@@ -132,7 +147,11 @@ class Settings:
         except KeyError:
             application = self.settings["application"] = copy.deepcopy(DEFAULT_SETTINGS["application"])
 
-        window = application["window"]
+        try:
+            window = application["window"]
+        except KeyError:
+            window = self.settings["application"]["windows"] = copy.deepcopy(DEFAULT_SETTINGS["application"]["window"])
+
         window["width"], window["height"] = size
 
     @property

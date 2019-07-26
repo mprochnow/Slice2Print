@@ -71,7 +71,7 @@ class MainFrameController:
                 self.frame.layer_view.view_all()
 
     def settings_dialog(self):
-        with dialog.SettingsDialog(self) as dlg:
+        with dialog.SettingsDialog(self.frame) as dlg:
             dlg.set_build_volume(self.settings.build_volume)
 
             if dlg.ShowModal() != wx.ID_CANCEL:
@@ -100,6 +100,46 @@ class MainFrameController:
 
         self.frame.Destroy()
 
+    def update_options(self):
+        first_layer_height = self.frame.options_panel.ctrl_first_layer_height.GetValue()
+        layer_height = self.frame.options_panel.ctrl_layer_height.GetValue()
+
+        print(type(first_layer_height), first_layer_height)
+        print(type(layer_height), layer_height)
+
+
+class OptionsPanel(wx.Panel):
+    def __init__(self, parent, controller):
+        self.controller = controller
+        wx.Panel.__init__(self, parent)
+
+        sizer = wx.FlexGridSizer(0, 3, 7, 7)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, value="0.2", min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_first_layer_height.SetIncrement(0.1)
+        sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, value="0.2", min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_layer_height.SetIncrement(0.1)
+        sizer.Add(self.ctrl_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.SetSizer(sizer)
+        self.Layout()
+
+        self.ctrl_first_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
+        self.ctrl_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
+
+    def on_update(self, event):
+        self.controller.update_options()
+
 
 class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
@@ -107,6 +147,7 @@ class MainFrame(wx.Frame):
     def __init__(self):
         self.settings = settings.Settings()
         self.settings.load_from_file()
+        self.controller = MainFrameController(self, self.settings)
 
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
 
@@ -114,17 +155,26 @@ class MainFrame(wx.Frame):
 
         self.toolbar = self.create_toolbar()
         self.status_bar = self.CreateStatusBar(1)
+        sizer = wx.BoxSizer()
+        panel = wx.Panel(self, wx.ID_ANY)
+        sizer.Add(panel, 1, wx.EXPAND)
+        self.SetSizer(sizer)
 
-        self.notebook = wx.Notebook(self)
+        self.options_panel = OptionsPanel(panel, self.controller)
+
+        self.notebook = wx.Notebook(panel)
         self.model_view = glview.GlCanvas(self.notebook)
         self.layer_view = glview.GlCanvas(self.notebook)
 
         self.notebook.AddPage(self.model_view, "3D Model")
         self.notebook.AddPage(self.layer_view, "Sliced Model")
 
-        sizer = wx.BoxSizer()
-        sizer.Add(self.notebook, 1, wx.EXPAND)
-        self.SetSizer(sizer)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.options_panel, 0, wx.EXPAND | wx.LEFT, 7)
+        sizer.Add(self.notebook, 1, wx.EXPAND | wx.LEFT, 7)
+        panel.SetSizer(sizer)
+        panel.Layout()
+        self.Layout()
 
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
         self.Bind(wx.EVT_SIZE, self.on_size)
@@ -133,13 +183,10 @@ class MainFrame(wx.Frame):
         self.SetAcceleratorTable(
             wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT)]))
 
-        self.Layout()
         self.Maximize(self.settings.app_window_maximized)
 
         self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
         self.layer_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
-
-        self.controller = MainFrameController(self, self.settings)
 
     def create_toolbar(self):
         toolbar = self.CreateToolBar()
