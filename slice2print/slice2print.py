@@ -27,6 +27,80 @@ import slicer
 import settings
 
 
+class MainFrameController:
+    def __init__(self, frame, settings):
+        self.frame = frame
+        self.settings = settings
+        self.model = None
+
+    def open_model(self):
+        with wx.FileDialog(self.frame, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
+                           style=wx.FD_FILE_MUST_EXIST) as dlg:
+            if dlg.ShowModal() != wx.ID_CANCEL:
+                filename = dlg.GetPath()
+                try:
+                    self.frame.notebook.SetSelection(0)
+
+                    self.model = model.Model.from_file(filename)
+                    self.frame.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
+                    self.frame.model_view.view_all()
+
+                    self.frame.status_bar.SetStatusText(
+                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
+                except Exception as e:
+                    d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
+                    d.ShowModal()
+
+    def view_all(self):
+        page = self.frame.notebook.GetSelection()
+        if page == 0:
+            self.frame.model_view.view_all()
+        elif page == 1:
+            self.frame.layer_view.view_all()
+
+    def slice_model(self):
+        with dialog.SlicerDialog(self.frame, self.model, 0.3, 0.2) as dlg:
+            if dlg.slice_model() == wx.ID_OK:
+                segments = dlg.get_sliced_model()
+                segments = numpy.array(segments, numpy.float32).flatten()
+                segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
+
+                self.frame.notebook.SetSelection(1)
+
+                self.frame.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
+                self.frame.layer_view.view_all()
+
+    def settings_dialog(self):
+        with dialog.SettingsDialog(self) as dlg:
+            dlg.set_build_volume(self.settings.build_volume)
+
+            if dlg.ShowModal() != wx.ID_CANCEL:
+                build_volume = dlg.get_build_volume()
+                self.settings.build_volume = build_volume
+
+                self.frame.model_view.platform_mesh.set_dimensions(build_volume)
+                self.frame.Refresh()
+
+    def frame_size_changed(self):
+        if self.frame.IsMaximized():
+            self.settings.app_window_maximized = True
+        else:
+            self.settings.app_window_maximized = False
+            self.settings.app_window_size = self.frame.GetSize()
+
+    def close_frame(self):
+        try:
+            self.settings.save()
+        except IOError:
+            pass
+
+        # Application does not close if window is minimized
+        if self.frame.IsIconized():
+            self.frame.Restore()
+
+        self.frame.Destroy()
+
+
 class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
 
@@ -34,21 +108,12 @@ class MainFrame(wx.Frame):
         self.settings = settings.Settings()
         self.settings.load_from_file()
 
-        self.model = None
-
         wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
+
         self.SetMinSize((640, 480))
 
-        self.toolbar = self.CreateToolBar()
-        self.tool_open = self.toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
-        self.toolbar.AddSeparator()
-        self.tool_view_all = self.toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
-        self.tool_slice = self.toolbar.AddTool(wx.ID_ANY, "", icons.play24.GetBitmap(), shortHelp="Slice")
-        self.toolbar.AddStretchableSpace()
-        self.tool_settings = self.toolbar.AddTool(wx.ID_ANY, "", icons.settings24.GetBitmap(), shortHelp="Settings")
-        self.toolbar.Realize()
-
-        self.statusbar = self.CreateStatusBar(1)
+        self.toolbar = self.create_toolbar()
+        self.status_bar = self.CreateStatusBar(1)
 
         self.notebook = wx.Notebook(self)
         self.model_view = glview.GlCanvas(self.notebook)
@@ -62,16 +127,11 @@ class MainFrame(wx.Frame):
         self.SetSizer(sizer)
 
         self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
-        self.Bind(wx.EVT_TOOL, self.on_open, id=self.tool_open.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_view_all, id=self.tool_view_all.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_slice, id=self.tool_slice.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_settings, id=self.tool_settings.GetId())
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
         self.SetAcceleratorTable(
-            wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT),
-                                 wx.AcceleratorEntry(wx.ACCEL_CTRL, ord("O"), self.tool_open.GetId())]))
+            wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT)]))
 
         self.Layout()
         self.Maximize(self.settings.app_window_maximized)
@@ -79,77 +139,46 @@ class MainFrame(wx.Frame):
         self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
         self.layer_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
 
+        self.controller = MainFrameController(self, self.settings)
+
+    def create_toolbar(self):
+        toolbar = self.CreateToolBar()
+        tool_open = toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
+        toolbar.AddSeparator()
+        tool_view_all = toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
+        tool_slice = toolbar.AddTool(wx.ID_ANY, "", icons.play24.GetBitmap(), shortHelp="Slice")
+        toolbar.AddStretchableSpace()
+        tool_settings = toolbar.AddTool(wx.ID_ANY, "", icons.settings24.GetBitmap(), shortHelp="Settings")
+        toolbar.Realize()
+
+        self.Bind(wx.EVT_TOOL, self.on_open, id=tool_open.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_view_all, id=tool_view_all.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_slice, id=tool_slice.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_settings, id=tool_settings.GetId())
+
+        return toolbar
+
     def on_exit(self, event):
         self.Close()
 
     def on_open(self, event):
-        with wx.FileDialog(self, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
-                           style=wx.FD_FILE_MUST_EXIST) as dialog:
-            if dialog.ShowModal() != wx.ID_CANCEL:
-                filename = dialog.GetPath()
-                try:
-                    self.notebook.SetSelection(0)
-
-                    self.model = model.Model.from_file(filename)
-                    self.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
-                    self.model_view.view_all()
-
-                    self.statusbar.SetStatusText(
-                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
-                except Exception as e:
-                    d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
-                    d.ShowModal()
+        self.controller.open_model()
 
     def on_view_all(self, event):
-        page = self.notebook.GetSelection()
-        if page == 0:
-            self.model_view.view_all()
-        elif page == 1:
-            self.layer_view.view_all()
+        self.controller.view_all()
 
     def on_slice(self, event):
-        with dialog.SlicerDialog(self, self.model, 0.3, 0.2) as dlg:
-            if dlg.slice_model() == wx.ID_OK:
-                segments = dlg.get_sliced_model()
-                segments = numpy.array(segments, numpy.float32).flatten()
-                segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
-
-                self.notebook.SetSelection(1)
-
-                self.layer_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
-                self.layer_view.view_all()
+        self.controller.slice_model()
 
     def on_settings(self, event):
-        with dialog.SettingsDialog(self) as dlg:
-            dlg.set_build_volume(self.settings.build_volume)
-
-            if dlg.ShowModal() != wx.ID_CANCEL:
-                build_volume = dlg.get_build_volume()
-                self.settings.build_volume = build_volume
-
-                self.model_view.platform_mesh.set_dimensions(build_volume)
-                self.Refresh()
+        self.controller.settings_dialog()
 
     def on_size(self, event):
-        if self.IsMaximized():
-            self.settings.app_window_maximized = True
-        else:
-            self.settings.app_window_maximized = False
-            self.settings.app_window_size = self.GetSize()
-
+        self.controller.frame_size_changed()
         event.Skip()
 
     def on_close(self, event):
-        try:
-            self.settings.save()
-        except IOError:
-            pass
-
-        # Application does not close if window is minimized
-        if self.IsIconized():
-            self.Restore()
-
-        self.Destroy()
+        self.controller.close_frame()
 
 
 if __name__ == "__main__":
