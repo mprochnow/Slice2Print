@@ -52,7 +52,8 @@ class Settings:
         try:
             with open(self.path_to_file, "r") as f:
                 try:
-                    self.settings = json.load(f)
+                    s = json.load(f)
+                    self.settings = {**DEFAULT_SETTINGS, **s}  # https://www.python.org/dev/peps/pep-0448/
                 except json.JSONDecodeError:
                     pass
         except IOError:
@@ -66,21 +67,8 @@ class Settings:
         if not os.path.isdir(self.path_to_folder):
             os.mkdir(self.path_to_folder)
 
-        settings = dict()
-
-        settings["printer"] = dict()
-        settings["printer"]["build_volume"] = dict()
-        settings["printer"]["build_volume"]["x"], \
-            settings["printer"]["build_volume"]["y"], \
-            settings["printer"]["build_volume"]["z"] = self.build_volume
-
-        settings["application"] = dict()
-        settings["application"]["window"] = dict()
-        settings["application"]["window"]["width"], settings["application"]["window"]["height"] = self.app_window_size
-        settings["application"]["window"]["maximized"] = self.app_window_maximized
-
         with open(self.path_to_file, "w") as f:
-            json.dump(settings, f, indent=2, sort_keys=True)
+            json.dump(self.settings, f, indent=2, sort_keys=True)
 
     @property
     def build_volume(self):
@@ -88,8 +76,7 @@ class Settings:
         Falls back to default values in case of an error
         :return: Build volume dimensions as tuple (x, y, z)
         """
-        printer = self.settings.get("printer", DEFAULT_SETTINGS["printer"])
-        build_volume = printer.get("build_volume", DEFAULT_SETTINGS["printer"]["build_volume"])
+        build_volume = self.settings["printer"]["build_volume"]
 
         try:
             assert isinstance(build_volume["x"], (int, float)) and \
@@ -97,7 +84,7 @@ class Settings:
                 isinstance(build_volume["z"], (int, float))
 
             assert build_volume["x"] > 0 and build_volume["y"] > 0 and build_volume["z"] > 0
-        except (AssertionError, KeyError):
+        except AssertionError:
             build_volume = DEFAULT_SETTINGS["printer"]["build_volume"]
 
         return build_volume["x"], build_volume["y"], build_volume["z"]
@@ -107,15 +94,7 @@ class Settings:
         """
         :param dimensions: Build volume dimensions as tuple (x, y, z)
         """
-        try:
-            printer = self.settings["printer"]
-        except KeyError:
-            printer = self.settings["printer"] = copy.deepcopy(DEFAULT_SETTINGS["printer"])
-
-        try:
-            build_volume = printer["build_volume"]
-        except KeyError:
-            build_volume = self.settings["printer"]["build_volume"] = copy.deepcopy(DEFAULT_SETTINGS["printer"]["build_volume"])
+        build_volume = self.settings["printer"]["build_volume"]
 
         build_volume["x"] = dimensions[0]
         build_volume["y"] = dimensions[1]
@@ -126,14 +105,14 @@ class Settings:
         """
         :return: Application window size as tuple (width, height)
         """
-        application = self.settings.get("application", DEFAULT_SETTINGS["application"])
-        window = application.get("window", DEFAULT_SETTINGS["application"]["window"])
+        window = self.settings["application"]["window"]
 
         try:
             assert isinstance(window["width"], int) and isinstance(window["height"], int)
             assert window["width"] > 0 and window["height"] > 0
-        except (AssertionError, KeyError):
-            window = DEFAULT_SETTINGS["application"]["window"]
+        except AssertionError:
+            window["width"] = DEFAULT_SETTINGS["application"]["window"]["width"]
+            window["height"] = DEFAULT_SETTINGS["application"]["windows"]["height"]
 
         return window["width"], window["height"]
 
@@ -142,15 +121,7 @@ class Settings:
         """
         :param size: Application window size as tuple (width, height)
         """
-        try:
-            application = self.settings["application"]
-        except KeyError:
-            application = self.settings["application"] = copy.deepcopy(DEFAULT_SETTINGS["application"])
-
-        try:
-            window = application["window"]
-        except KeyError:
-            window = self.settings["application"]["windows"] = copy.deepcopy(DEFAULT_SETTINGS["application"]["window"])
+        window = self.settings["application"]["window"]
 
         window["width"], window["height"] = size
 
@@ -159,13 +130,12 @@ class Settings:
         """
         :return: True if application window shall be maximized else False
         """
-        application = self.settings.get("application", DEFAULT_SETTINGS["application"])
-        window = application.get("window", DEFAULT_SETTINGS["application"]["window"])
+        window = self.settings["application"]["window"]
 
         try:
             assert isinstance(window["maximized"], bool)
-        except (AssertionError, KeyError):
-            window = DEFAULT_SETTINGS["application"]["window"]
+        except AssertionError:
+            window["maximized"] = DEFAULT_SETTINGS["application"]["window"]["maximized"]
 
         return window["maximized"]
 
@@ -174,16 +144,31 @@ class Settings:
         """
         :param maximized: True if application window is maximized else False
         """
+        self.settings["application"]["window"]["maximized"] = maximized
+
+    @property
+    def first_layer_height(self):
         try:
-            application = self.settings["application"]
-        except KeyError:
-            application = self.settings["application"] = copy.deepcopy(DEFAULT_SETTINGS["application"])
+            assert isinstance(self.settings["print_options"]["first_layer_height"], float)
+        except AssertionError:
+            self.settings["print_options"]["first_layer_height"] = \
+                DEFAULT_SETTINGS["print_options"]["first_layer_height"]
 
-        application["window"]["maximized"] = maximized
+        return self.settings["print_options"]["first_layer_height"]
 
+    @first_layer_height.setter
+    def first_layer_height(self, h):
+        self.settings["print_options"]["first_layer_height"] = h
 
-if __name__ == "__main__":
-    s = Settings()
-    s.load_from_file()
-    print(s.app_window_size)
-    s.save()
+    @property
+    def layer_height(self):
+        try:
+            assert isinstance(self.settings["print_options"]["layer_height"], float)
+        except AssertionError:
+            self.settings["print_options"]["layer_height"] = DEFAULT_SETTINGS["print_options"]["layer_height"]
+
+        return self.settings["print_options"]["layer_height"]
+
+    @layer_height.setter
+    def layer_height(self, h):
+        self.settings["print_options"]["layer_height"] = h

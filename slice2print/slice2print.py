@@ -59,7 +59,10 @@ class MainFrameController:
             self.frame.layer_view.view_all()
 
     def slice_model(self):
-        with dialog.SlicerDialog(self.frame, self.model, 0.3, 0.2) as dlg:
+        with dialog.SlicerDialog(self.frame,
+                                 self.model,
+                                 self.settings.first_layer_height,
+                                 self.settings.layer_height) as dlg:
             if dlg.slice_model() == wx.ID_OK:
                 segments = dlg.get_sliced_model()
                 segments = numpy.array(segments, numpy.float32).flatten()
@@ -101,11 +104,8 @@ class MainFrameController:
         self.frame.Destroy()
 
     def update_options(self):
-        first_layer_height = self.frame.options_panel.ctrl_first_layer_height.GetValue()
-        layer_height = self.frame.options_panel.ctrl_layer_height.GetValue()
-
-        print(type(first_layer_height), first_layer_height)
-        print(type(layer_height), layer_height)
+        self.settings.first_layer_height = self.frame.options_panel.ctrl_first_layer_height.GetValue()
+        self.settings.layer_height = self.frame.options_panel.ctrl_layer_height.GetValue()
 
 
 class OptionsPanel(wx.Panel):
@@ -117,7 +117,9 @@ class OptionsPanel(wx.Panel):
 
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
 
-        self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, value="0.2", min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_first_layer_height.SetValue(self.controller.settings.first_layer_height)
+        self.ctrl_first_layer_height.SetDigits(2)
         self.ctrl_first_layer_height.SetIncrement(0.1)
         sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
 
@@ -125,7 +127,9 @@ class OptionsPanel(wx.Panel):
 
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
 
-        self.ctrl_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, value="0.2", min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        self.ctrl_layer_height.SetValue(self.controller.settings.layer_height)
+        self.ctrl_layer_height.SetDigits(2)
         self.ctrl_layer_height.SetIncrement(0.1)
         sizer.Add(self.ctrl_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
 
