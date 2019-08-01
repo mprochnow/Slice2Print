@@ -19,36 +19,38 @@ import wx.lib.masked.numctrl
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, -1, title="Settings", size=wx.DefaultSize)
+        wx.Dialog.__init__(self, parent, wx.ID_ANY, title="Settings", size=wx.DefaultSize)
 
-        top_sizer = wx.BoxSizer(wx.VERTICAL)
-        bv_sizer = wx.StaticBoxSizer(wx.StaticBox(self, -1, "Build volume"), wx.HORIZONTAL)
+        build_volume_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Build volume"), wx.HORIZONTAL)
+
+        self.ctrl_build_volume_x = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
+        self.ctrl_build_volume_x.SetAllowNegative(False)
+        self.ctrl_build_volume_x.SetBounds(1, None)
+        self.ctrl_build_volume_x.SetLimited(True)
+        build_volume_sizer.Add(self.ctrl_build_volume_x, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_build_volume_y = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
+        self.ctrl_build_volume_y.SetAllowNegative(False)
+        self.ctrl_build_volume_y.SetBounds(1, None)
+        self.ctrl_build_volume_y.SetLimited(True)
+        build_volume_sizer.Add(self.ctrl_build_volume_y, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_build_volume_z = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
+        self.ctrl_build_volume_z.SetAllowNegative(False)
+        self.ctrl_build_volume_z.SetBounds(1, None)
+        self.ctrl_build_volume_z.SetLimited(True)
+        build_volume_sizer.Add(self.ctrl_build_volume_z, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+
         btn_sizer = self.CreateButtonSizer(wx.OK | wx.CANCEL)
 
-        self.ctrl_bv_x = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
-        self.ctrl_bv_x.SetAllowNegative(False)
-        self.ctrl_bv_x.SetBounds(1, None)
-        self.ctrl_bv_x.SetLimited(True)
-        bv_sizer.Add(self.ctrl_bv_x, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
-
-        bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
-
-        self.ctrl_bv_y = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
-        self.ctrl_bv_y.SetAllowNegative(False)
-        self.ctrl_bv_y.SetBounds(1, None)
-        self.ctrl_bv_y.SetLimited(True)
-        bv_sizer.Add(self.ctrl_bv_y, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
-
-        bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
-
-        self.ctrl_bv_z = wx.lib.masked.numctrl.NumCtrl(bv_sizer.GetStaticBox(), -1)
-        self.ctrl_bv_z.SetAllowNegative(False)
-        self.ctrl_bv_z.SetBounds(1, None)
-        self.ctrl_bv_z.SetLimited(True)
-        bv_sizer.Add(self.ctrl_bv_z, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
-
-        bv_sizer.Add(wx.StaticText(bv_sizer.GetStaticBox(), -1, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
-        top_sizer.Add(bv_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        top_sizer = wx.BoxSizer(wx.VERTICAL)
+        top_sizer.Add(build_volume_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         top_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 7)
 
         self.SetSizer(top_sizer)
@@ -59,15 +61,17 @@ class SettingsDialog(wx.Dialog):
         """
         :param dimensions: Build volume dimensions as tuple (x, y, z)
         """
-        self.ctrl_bv_x.SetValue(dimensions[0])
-        self.ctrl_bv_y.SetValue(dimensions[1])
-        self.ctrl_bv_z.SetValue(dimensions[2])
+        self.ctrl_build_volume_x.SetValue(dimensions[0])
+        self.ctrl_build_volume_y.SetValue(dimensions[1])
+        self.ctrl_build_volume_z.SetValue(dimensions[2])
 
     def get_build_volume(self):
         """
         :return: Build volume dimensions as tuple (x, y, z)
         """
-        return self.ctrl_bv_x.GetValue(), self.ctrl_bv_y.GetValue(), self.ctrl_bv_z.GetValue()
+        return self.ctrl_build_volume_x.GetValue(), \
+            self.ctrl_build_volume_y.GetValue(), \
+            self.ctrl_build_volume_z.GetValue()
 
 
 if __name__ == "__main__":
