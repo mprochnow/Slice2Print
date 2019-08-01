@@ -16,7 +16,8 @@ DEFAULT_SETTINGS = {
             "x": 200,
             "y": 200,
             "z": 200
-        }
+        },
+        "nozzle_diameter": 0.4
     },
     "print_options": {
         "first_layer_height": 0.2,
@@ -54,6 +55,8 @@ class Settings:
                 try:
                     s = json.load(f)
                     self.settings = {**DEFAULT_SETTINGS, **s}  # https://www.python.org/dev/peps/pep-0448/
+
+                    print(json.dumps(self.settings, indent=4))
                 except json.JSONDecodeError:
                     pass
         except IOError:
@@ -172,3 +175,16 @@ class Settings:
     @layer_height.setter
     def layer_height(self, h):
         self.settings["print_options"]["layer_height"] = h
+
+    @property
+    def nozzle_diameter(self):
+        try:
+            assert isinstance(self.settings["printer"]["nozzle_diameter"], float)
+        except AssertionError:
+            self.settings["printer"]["nozzle_diameter"] = DEFAULT_SETTINGS["printer"]["nozzle_diameter"]
+
+        return self.settings["printer"]["nozzle_diameter"]
+
+    @nozzle_diameter.setter
+    def nozzle_diameter(self, d):
+        self.settings["printer"]["nozzle_diameter"] = d

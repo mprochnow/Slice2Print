@@ -76,10 +76,11 @@ class MainFrameController:
     def settings_dialog(self):
         with dialog.SettingsDialog(self.frame) as dlg:
             dlg.set_build_volume(self.settings.build_volume)
+            dlg.set_nozzle_diameter(self.settings.nozzle_diameter)
 
             if dlg.ShowModal() != wx.ID_CANCEL:
-                build_volume = dlg.get_build_volume()
-                self.settings.build_volume = build_volume
+                build_volume = self.settings.build_volume = dlg.get_build_volume()
+                self.settings.nozzle_diameter = dlg.get_nozzle_diameter()
 
                 self.frame.model_view.platform_mesh.set_dimensions(build_volume)
                 self.frame.Refresh()

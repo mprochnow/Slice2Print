@@ -16,6 +16,8 @@
 import wx
 import wx.lib.masked.numctrl
 
+LABEL_WIDTH = 150
+
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, parent):
@@ -47,10 +49,28 @@ class SettingsDialog(wx.Dialog):
 
         build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
 
+        e_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Extruder"), wx.VERTICAL)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "Nozzle diameter", size=wx.Size(LABEL_WIDTH, -1)),
+                  0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        self.ctrl_nozzle_diameter = wx.lib.masked.numctrl.NumCtrl(e_sizer.GetStaticBox(), wx.ID_ANY)
+        self.ctrl_nozzle_diameter.SetAllowNegative(False)
+        self.ctrl_nozzle_diameter.SetBounds(0, None)
+        self.ctrl_nozzle_diameter.SetFractionWidth(2)
+        self.ctrl_nozzle_diameter.SetLimited(True)
+        sizer.Add(self.ctrl_nozzle_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"),
+                  0, wx.ALIGN_CENTER_VERTICAL, 7)
+
+        e_sizer.Add(sizer, 0)
+
         btn_sizer = self.CreateButtonSizer(wx.OK | wx.CANCEL)
 
         top_sizer = wx.BoxSizer(wx.VERTICAL)
         top_sizer.Add(build_volume_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        top_sizer.Add(e_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         top_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 7)
 
         self.SetSizer(top_sizer)
@@ -72,6 +92,12 @@ class SettingsDialog(wx.Dialog):
         return self.ctrl_build_volume_x.GetValue(), \
             self.ctrl_build_volume_y.GetValue(), \
             self.ctrl_build_volume_z.GetValue()
+
+    def set_nozzle_diameter(self, nozzle_diameter):
+        self.ctrl_nozzle_diameter.SetValue(nozzle_diameter)
+
+    def get_nozzle_diameter(self):
+        return self.ctrl_nozzle_diameter.GetValue()
 
 
 if __name__ == "__main__":
