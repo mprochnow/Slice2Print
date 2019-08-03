@@ -104,9 +104,19 @@ class MainFrameController:
 
         self.frame.Destroy()
 
-    def update_options(self):
-        self.settings.first_layer_height = self.frame.options_panel.ctrl_first_layer_height.GetValue()
-        self.settings.layer_height = self.frame.options_panel.ctrl_layer_height.GetValue()
+    def init_options(self, options_panel):
+        options_panel.ctrl_first_layer_height.SetValue(self.settings.first_layer_height)
+        options_panel.ctrl_layer_height.SetValue(self.settings.layer_height)
+        options_panel.ctrl_first_layer_speed.SetValue(self.settings.first_layer_speed)
+        options_panel.ctrl_print_speed.SetValue(self.settings.print_speed)
+        options_panel.ctrl_travel_speed.SetValue(self.settings.travel_speed)
+
+    def update_options(self, options_panel):
+        self.settings.first_layer_height = options_panel.ctrl_first_layer_height.GetValue()
+        self.settings.layer_height = options_panel.ctrl_layer_height.GetValue()
+        self.settings.first_layer_speed = options_panel.ctrl_first_layer_speed.GetValue()
+        self.settings.print_speed = options_panel.ctrl_print_speed.GetValue()
+        self.settings.travel_speed = options_panel.ctrl_travel_speed.GetValue()
 
 
 class OptionsPanel(wx.Panel):
@@ -116,34 +126,63 @@ class OptionsPanel(wx.Panel):
 
         sizer = wx.FlexGridSizer(0, 3, 7, 7)
 
+        # First layer height
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        self.ctrl_first_layer_height.SetValue(self.controller.settings.first_layer_height)
         self.ctrl_first_layer_height.SetDigits(2)
         self.ctrl_first_layer_height.SetIncrement(0.1)
         sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
 
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
 
+        # Layer height
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        self.ctrl_layer_height.SetValue(self.controller.settings.layer_height)
         self.ctrl_layer_height.SetDigits(2)
         self.ctrl_layer_height.SetIncrement(0.1)
         sizer.Add(self.ctrl_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
 
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
 
+        # First layer speed
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_first_layer_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        sizer.Add(self.ctrl_first_layer_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        # Print speed
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Print speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_print_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        sizer.Add(self.ctrl_print_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        # Travel speed
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Travel speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+
+        self.ctrl_travel_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        sizer.Add(self.ctrl_travel_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+
         self.SetSizer(sizer)
         self.Layout()
 
         self.ctrl_first_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
         self.ctrl_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
+        self.ctrl_first_layer_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_print_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_travel_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+
+        self.controller.init_options(self)
 
     def on_update(self, event):
-        self.controller.update_options()
+        self.controller.update_options(self)
 
 
 class MainFrame(wx.Frame):

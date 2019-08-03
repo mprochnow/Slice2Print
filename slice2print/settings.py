@@ -21,7 +21,10 @@ DEFAULT_SETTINGS = {
     },
     "print_options": {
         "first_layer_height": 0.2,
-        "layer_height": 0.2
+        "layer_height": 0.2,
+        "first_layer_speed": 35,
+        "print_speed": 50,
+        "travel_speed": 150  # This value does not really change once set, so is it maybe a printer setting?
     }
 }
 
@@ -54,9 +57,10 @@ class Settings:
             with open(self.path_to_file, "r") as f:
                 try:
                     s = json.load(f)
-                    self.settings = {**DEFAULT_SETTINGS, **s}  # https://www.python.org/dev/peps/pep-0448/
 
-                    print(json.dumps(self.settings, indent=4))
+                    # TODO Join DEFAULT_SETTINGS and settings from file in a way that missing entries will be added
+                    # TODO Check data types during joining
+                    self.settings = {**DEFAULT_SETTINGS, **s}  # https://www.python.org/dev/peps/pep-0448/
                 except json.JSONDecodeError:
                     pass
         except IOError:
@@ -81,15 +85,6 @@ class Settings:
         """
         build_volume = self.settings["printer"]["build_volume"]
 
-        try:
-            assert isinstance(build_volume["x"], (int, float)) and \
-                isinstance(build_volume["y"], (int, float)) and \
-                isinstance(build_volume["z"], (int, float))
-
-            assert build_volume["x"] > 0 and build_volume["y"] > 0 and build_volume["z"] > 0
-        except AssertionError:
-            build_volume = DEFAULT_SETTINGS["printer"]["build_volume"]
-
         return build_volume["x"], build_volume["y"], build_volume["z"]
 
     @build_volume.setter
@@ -110,13 +105,6 @@ class Settings:
         """
         window = self.settings["application"]["window"]
 
-        try:
-            assert isinstance(window["width"], int) and isinstance(window["height"], int)
-            assert window["width"] > 0 and window["height"] > 0
-        except AssertionError:
-            window["width"] = DEFAULT_SETTINGS["application"]["window"]["width"]
-            window["height"] = DEFAULT_SETTINGS["application"]["windows"]["height"]
-
         return window["width"], window["height"]
 
     @app_window_size.setter
@@ -133,14 +121,7 @@ class Settings:
         """
         :return: True if application window shall be maximized else False
         """
-        window = self.settings["application"]["window"]
-
-        try:
-            assert isinstance(window["maximized"], bool)
-        except AssertionError:
-            window["maximized"] = DEFAULT_SETTINGS["application"]["window"]["maximized"]
-
-        return window["maximized"]
+        return self.settings["application"]["window"]["maximized"]
 
     @app_window_maximized.setter
     def app_window_maximized(self, maximized):
@@ -151,12 +132,6 @@ class Settings:
 
     @property
     def first_layer_height(self):
-        try:
-            assert isinstance(self.settings["print_options"]["first_layer_height"], float)
-        except AssertionError:
-            self.settings["print_options"]["first_layer_height"] = \
-                DEFAULT_SETTINGS["print_options"]["first_layer_height"]
-
         return self.settings["print_options"]["first_layer_height"]
 
     @first_layer_height.setter
@@ -165,11 +140,6 @@ class Settings:
 
     @property
     def layer_height(self):
-        try:
-            assert isinstance(self.settings["print_options"]["layer_height"], float)
-        except AssertionError:
-            self.settings["print_options"]["layer_height"] = DEFAULT_SETTINGS["print_options"]["layer_height"]
-
         return self.settings["print_options"]["layer_height"]
 
     @layer_height.setter
@@ -178,13 +148,32 @@ class Settings:
 
     @property
     def nozzle_diameter(self):
-        try:
-            assert isinstance(self.settings["printer"]["nozzle_diameter"], float)
-        except AssertionError:
-            self.settings["printer"]["nozzle_diameter"] = DEFAULT_SETTINGS["printer"]["nozzle_diameter"]
-
         return self.settings["printer"]["nozzle_diameter"]
 
     @nozzle_diameter.setter
     def nozzle_diameter(self, d):
         self.settings["printer"]["nozzle_diameter"] = d
+
+    @property
+    def first_layer_speed(self):
+        return self.settings["print_options"]["first_layer_speed"]
+
+    @first_layer_speed.setter
+    def first_layer_speed(self, s):
+        self.settings["print_options"]["first_layer_speed"] = s
+
+    @property
+    def print_speed(self):
+        return self.settings["print_options"]["print_speed"]
+
+    @print_speed.setter
+    def print_speed(self, s):
+        self.settings["print_options"]["print_speed"] = s
+
+    @property
+    def travel_speed(self):
+        return self.settings["print_options"]["travel_speed"]
+
+    @travel_speed.setter
+    def travel_speed(self, s):
+        self.settings["print_options"]["travel_speed"] = s
