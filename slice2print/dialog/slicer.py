@@ -67,7 +67,7 @@ class SlicerDialog(wx.Dialog):
         return self.ShowModal()
 
     def get_sliced_model(self):
-        return self.slicer.get_sliced_model()
+        return self.slicer.get_sliced_model_outlines()
 
     def update(self):
         wx.CallAfter(self._update)

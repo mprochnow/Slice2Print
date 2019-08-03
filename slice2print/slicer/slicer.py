@@ -347,7 +347,7 @@ class Slicer:
                     if self.cancelled:
                         break
 
-    def get_sliced_model(self):
+    def get_sliced_model_outlines(self):
         """
         :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
         """
@@ -381,4 +381,4 @@ if __name__ == "__main__":
     m = model.Model.from_file("../test.stl")
     s = Slicer(m, 0.3, 0.2)
     s.slice()
-    print(s.get_sliced_model())
+    print(s.get_sliced_model_outlines())

@@ -1,0 +1,1 @@
+from .slicer import Slicer, VERTEX_PRECISION
