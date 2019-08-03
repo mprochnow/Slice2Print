@@ -77,10 +77,12 @@ class MainFrameController:
         with dialog.SettingsDialog(self.frame) as dlg:
             dlg.set_build_volume(self.settings.build_volume)
             dlg.set_nozzle_diameter(self.settings.nozzle_diameter)
+            dlg.set_filament_diameter(self.settings.filament_diameter)
 
             if dlg.ShowModal() != wx.ID_CANCEL:
                 build_volume = self.settings.build_volume = dlg.get_build_volume()
                 self.settings.nozzle_diameter = dlg.get_nozzle_diameter()
+                self.settings.filament_diameter = dlg.get_filament_diameter()
 
                 self.frame.model_view.platform_mesh.set_dimensions(build_volume)
                 self.frame.Refresh()

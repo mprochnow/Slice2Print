@@ -50,27 +50,43 @@ class SettingsDialog(wx.Dialog):
         build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         e_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Extruder"), wx.VERTICAL)
+        # Nozzle diameter
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "Nozzle diameter", size=wx.Size(LABEL_WIDTH, -1)),
-                  0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+                  0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         self.ctrl_nozzle_diameter = wx.lib.masked.numctrl.NumCtrl(e_sizer.GetStaticBox(), wx.ID_ANY)
         self.ctrl_nozzle_diameter.SetAllowNegative(False)
-        self.ctrl_nozzle_diameter.SetBounds(0, None)
         self.ctrl_nozzle_diameter.SetFractionWidth(2)
         self.ctrl_nozzle_diameter.SetLimited(True)
-        sizer.Add(self.ctrl_nozzle_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+        sizer.Add(self.ctrl_nozzle_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"),
-                  0, wx.ALIGN_CENTER_VERTICAL, 7)
+        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0,
+                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
+
+        e_sizer.Add(sizer, 0)
+
+        # Filament diameter
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "Filament diameter", size=wx.Size(LABEL_WIDTH, -1)),
+                  0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+
+        self.ctrl_filament_diameter = wx.lib.masked.numctrl.NumCtrl(e_sizer.GetStaticBox(), wx.ID_ANY)
+        self.ctrl_filament_diameter.SetAllowNegative(False)
+        self.ctrl_filament_diameter.SetFractionWidth(2)
+        self.ctrl_filament_diameter.SetLimited(True)
+        sizer.Add(self.ctrl_filament_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+
+        sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0,
+                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
 
         e_sizer.Add(sizer, 0)
 
         btn_sizer = self.CreateButtonSizer(wx.OK | wx.CANCEL)
 
         top_sizer = wx.BoxSizer(wx.VERTICAL)
-        top_sizer.Add(build_volume_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        top_sizer.Add(e_sizer, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        top_sizer.Add(build_volume_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        top_sizer.Add(e_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         top_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 7)
 
         self.SetSizer(top_sizer)
@@ -98,6 +114,12 @@ class SettingsDialog(wx.Dialog):
 
     def get_nozzle_diameter(self):
         return self.ctrl_nozzle_diameter.GetValue()
+
+    def set_filament_diameter(self, filament_diameter):
+        self.ctrl_filament_diameter.SetValue(filament_diameter)
+
+    def get_filament_diameter(self):
+        return self.ctrl_filament_diameter.GetValue()
 
 
 if __name__ == "__main__":

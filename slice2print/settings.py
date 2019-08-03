@@ -17,7 +17,8 @@ DEFAULT_SETTINGS = {
             "y": 200,
             "z": 200
         },
-        "nozzle_diameter": 0.4
+        "nozzle_diameter": 0.4,
+        "filament_diameter": 1.75
     },
     "print_options": {
         "first_layer_height": 0.2,
@@ -177,3 +178,11 @@ class Settings:
     @travel_speed.setter
     def travel_speed(self, s):
         self.settings["print_options"]["travel_speed"] = s
+
+    @property
+    def filament_diameter(self):
+        return self.settings["printer"]["filament_diameter"]
+
+    @filament_diameter.setter
+    def filament_diameter(self, d):
+        self.settings["printer"]["filament_diameter"] = d
