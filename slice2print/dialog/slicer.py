@@ -58,9 +58,8 @@ class SlicerDialog(wx.Dialog):
         self.cancel = True
 
     def slice_model(self):
-        self.slicer = slicer.Slicer(self.model, self.slicer_config, self.update, self.update_interval)
-
-        self.thread = threading.Thread(target=self.slicer.slice)
+        self.slicer = slicer.ModelSlicer(self.slicer_config, self.model, self.update)
+        self.thread = threading.Thread(target=self.slicer.execute)
         self.thread.start()
 
         return self.ShowModal()
@@ -82,4 +81,4 @@ class SlicerDialog(wx.Dialog):
 
         self.thread.join(0.02)
         if not self.thread.is_alive():
-            self.EndModal(wx.ID_CANCEL if self.slicer.cancelled else wx.ID_OK)
+            self.EndModal(wx.ID_CANCEL if self.slicer.cancelled() else wx.ID_OK)

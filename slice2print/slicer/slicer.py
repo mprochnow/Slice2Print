@@ -347,33 +347,6 @@ class Slicer:
                     if self.cancelled:
                         break
 
-    def get_sliced_model_outlines(self):
-        """
-        :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
-        """
-        sliced_model = []
-        for contour in self.contours:
-            for intersections in contour:
-                p1 = p2 = None
-
-                for intersection in intersections:
-                    if p1 is None:
-                        p1 = intersection
-                    elif p2 is None:
-                        p2 = intersection
-                    else:
-                        p1 = p2
-                        p2 = intersection
-
-                    if p1 is not None and p2 is not None:
-                        sliced_model.append([[*p1.intersection], [*p2.intersection]])
-
-                if intersections.closed:
-                    sliced_model.append([[*intersections.last.intersection],
-                                         [*intersections.first.intersection]])
-
-        return sliced_model
-
 
 if __name__ == "__main__":
     import model
