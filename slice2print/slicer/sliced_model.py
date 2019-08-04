@@ -22,10 +22,11 @@ class LayerPart:
         self.perimeters = []
 
         # TODO Add a small overlap to fill the void area between two perimeters
-        for i in range(cfg.perimeters-1):
+        for i in range(1, cfg.perimeters):
             pco = pyclipper.PyclipperOffset()
             pco.AddPath(external_perimeter, pyclipper.JT_SQUARE, pyclipper.ET_CLOSEDPOLYGON)
-            self.perimeters.append(pco.Execute(-i*cfg.extrusion_width*cfg.VERTEX_PRECISION))
+            solution = pco.Execute(-i*cfg.extrusion_width*cfg.VERTEX_PRECISION)
+            self.perimeters.append(solution)
 
 
 class Layer:
