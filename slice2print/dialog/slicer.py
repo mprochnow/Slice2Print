@@ -21,15 +21,14 @@ import slicer
 
 
 class SlicerDialog(wx.Dialog):
-    def __init__(self, parent, model, first_layer_height, layer_height):
+    def __init__(self, parent, model, slicer_config):
         wx.Dialog.__init__(self, parent, -1, "Slicing...", style=wx.CAPTION)
 
         self.slicer = None
         self.thread = None
         self.cancel = False
         self.model = model
-        self.first_layer_height = first_layer_height
-        self.layer_height = layer_height
+        self.slicer_config = slicer_config
         self.update_interval = model.facet_count // 100 if model.facet_count > 100 else model.facet_count
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -59,7 +58,7 @@ class SlicerDialog(wx.Dialog):
         self.cancel = True
 
     def slice_model(self):
-        self.slicer = slicer.Slicer(self.model, self.first_layer_height, self.layer_height, self.update, self.update_interval)
+        self.slicer = slicer.Slicer(self.model, self.slicer_config, self.update, self.update_interval)
 
         self.thread = threading.Thread(target=self.slicer.slice)
         self.thread.start()
@@ -69,6 +68,7 @@ class SlicerDialog(wx.Dialog):
     def get_sliced_model(self):
         return self.slicer.get_sliced_model_outlines()
 
+    # TODO Make text to show in overlay a parameter of this method
     def update(self):
         wx.CallAfter(self._update)
         return self.cancel

@@ -3,6 +3,8 @@ import json
 import os.path
 import sys
 
+import slicer
+
 DEFAULT_SETTINGS = {
     "application": {
         "window": {
@@ -77,6 +79,18 @@ class Settings:
 
         with open(self.path_to_file, "w") as f:
             json.dump(self.settings, f, indent=2, sort_keys=True)
+
+    def get_slicer_config(self):
+        cfg = slicer.SlicerConfig()
+        cfg.first_layer_height = self.first_layer_height
+        cfg.layer_height = self.layer_height
+        cfg.nozzle_diameter = self.nozzle_diameter
+        cfg.filament_diameter = self.filament_diameter
+        cfg.first_layer_speed = self.first_layer_speed
+        cfg.print_speed = self.print_speed
+        cfg.travel_speed = self.travel_speed
+
+        return cfg
 
     @property
     def build_volume(self):

@@ -61,8 +61,7 @@ class MainFrameController:
     def slice_model(self):
         with dialog.SlicerDialog(self.frame,
                                  self.model,
-                                 self.settings.first_layer_height,
-                                 self.settings.layer_height) as dlg:
+                                 self.settings.get_slicer_config()) as dlg:
             if dlg.slice_model() == wx.ID_OK:
                 segments = dlg.get_sliced_model()
                 segments = numpy.array(segments, numpy.float32).flatten()
