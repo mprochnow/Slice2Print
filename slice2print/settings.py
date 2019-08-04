@@ -27,7 +27,8 @@ DEFAULT_SETTINGS = {
         "layer_height": 0.2,
         "first_layer_speed": 35,
         "print_speed": 50,
-        "travel_speed": 150  # This value does not really change once set, so is it maybe a printer setting?
+        "travel_speed": 150,  # This value does not really change once set, so is it maybe a printer setting?
+        "perimeters": 2
     }
 }
 
@@ -89,6 +90,7 @@ class Settings:
         cfg.first_layer_speed = self.first_layer_speed
         cfg.print_speed = self.print_speed
         cfg.travel_speed = self.travel_speed
+        cfg.perimeters = self.perimeters
 
         return cfg
 
@@ -200,3 +202,11 @@ class Settings:
     @filament_diameter.setter
     def filament_diameter(self, d):
         self.settings["printer"]["filament_diameter"] = d
+
+    @property
+    def perimeters(self):
+        return self.settings["print_options"]["perimeters"]
+
+    @perimeters.setter
+    def perimeters(self, p):
+        self.settings["print_options"]["perimeters"] = p

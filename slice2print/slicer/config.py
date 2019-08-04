@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
+
 class SlicerConfig:
     def __init__(self):
         self.first_layer_height = None
@@ -24,3 +25,9 @@ class SlicerConfig:
         self.first_layer_speed = None
         self.print_speed = None
         self.travel_speed = None
+
+        self.perimeters = None
+
+    @property
+    def extrusion_width(self):
+        return self.nozzle_diameter * 1.2

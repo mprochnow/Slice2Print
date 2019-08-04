@@ -111,6 +111,7 @@ class MainFrameController:
         options_panel.ctrl_first_layer_speed.SetValue(self.settings.first_layer_speed)
         options_panel.ctrl_print_speed.SetValue(self.settings.print_speed)
         options_panel.ctrl_travel_speed.SetValue(self.settings.travel_speed)
+        options_panel.ctrl_perimeters.SetValue(self.settings.perimeters)
 
     def update_options(self, options_panel):
         self.settings.first_layer_height = options_panel.ctrl_first_layer_height.GetValue()
@@ -118,6 +119,7 @@ class MainFrameController:
         self.settings.first_layer_speed = options_panel.ctrl_first_layer_speed.GetValue()
         self.settings.print_speed = options_panel.ctrl_print_speed.GetValue()
         self.settings.travel_speed = options_panel.ctrl_travel_speed.GetValue()
+        self.settings.perimeters = options_panel.ctrl_perimeters.GetValue()
 
 
 class OptionsPanel(wx.Panel):
@@ -125,51 +127,59 @@ class OptionsPanel(wx.Panel):
         self.controller = controller
         wx.Panel.__init__(self, parent)
 
-        sizer = wx.FlexGridSizer(0, 3, 7, 7)
+        sizer = wx.FlexGridSizer(0, 3, 0, 0)
 
         # First layer height
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL| wx.TOP, 7)
 
         self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
         self.ctrl_first_layer_height.SetDigits(2)
         self.ctrl_first_layer_height.SetIncrement(0.1)
-        sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         # Layer height
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
 
         self.ctrl_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
         self.ctrl_layer_height.SetDigits(2)
         self.ctrl_layer_height.SetIncrement(0.1)
-        sizer.Add(self.ctrl_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(self.ctrl_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+
+        # Perimeters
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Perimeters"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
+
+        self.ctrl_perimeters = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        sizer.Add(self.ctrl_perimeters, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         # First layer speed
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer speed"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
         self.ctrl_first_layer_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        sizer.Add(self.ctrl_first_layer_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(self.ctrl_first_layer_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         # Print speed
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Print speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Print speed"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
         self.ctrl_print_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        sizer.Add(self.ctrl_print_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(self.ctrl_print_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         # Travel speed
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Travel speed"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Travel speed"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
         self.ctrl_travel_speed = wx.SpinCtrl(self, wx.ID_ANY, min=1, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        sizer.Add(self.ctrl_travel_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(self.ctrl_travel_speed, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm/sec"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         self.SetSizer(sizer)
         self.Layout()
@@ -179,6 +189,7 @@ class OptionsPanel(wx.Panel):
         self.ctrl_first_layer_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_print_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_travel_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_perimeters.Bind(wx.EVT_SPINCTRL, self.on_update)
 
         self.controller.init_options(self)
 
