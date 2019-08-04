@@ -21,8 +21,6 @@ import math
 
 import numpy
 
-VERTEX_PRECISION = 1000.0
-
 
 class Vertex:
     __slots__ = ["x", "y", "z", "flag"]
@@ -88,10 +86,10 @@ class Intersection:
     Contains the intersection of a z plane with a triangle
     and the two edges of the triangle which were intersected
     """
-    __slots__ = ["intersection", "forward_edge", "backward_edge", "layer"]
+    __slots__ = ["vertex", "forward_edge", "backward_edge", "layer"]
 
-    def __init__(self, intersection, forward_edge, backward_edge, layer):
-        self.intersection = intersection
+    def __init__(self, vertex, forward_edge, backward_edge, layer):
+        self.vertex = vertex
         self.forward_edge = forward_edge
         self.backward_edge = backward_edge
         self.layer = layer
@@ -249,8 +247,9 @@ class Contour:
     """
     Contains the contour of one layer
     """
-    def __init__(self):
+    def __init__(self, z):
         self.contour = collections.deque()
+        self.z = z
 
     def add(self, intersection):
         """
@@ -298,23 +297,25 @@ class Contour:
 
 
 class Slicer:
-    def __init__(self, model, slicer_config, update_func=None, update_interval=None):
+    def __init__(self, slicer_config, model, update_func=None):
         """
+        :param slicer_config: Instance of SlicerConfig
         :param model: Instance of model.Model
-        :param first_layer_height: in mm (e.g. 0.3)
-        :param layer_height: in mm (e.g. 0.2)
+        :param update_func: Function to call to indicate progress
         """
         self.cancelled = False
         self.model = model
         self.slicer_config = slicer_config
         self.update_func = update_func
-        self.update_interval = update_interval
+
+        self.update_interval = self.model.facet_count // 100 if self.model.facet_count > 100 else self.model.facet_count
 
         self.layer_count = math.floor((self.model.dimensions.z - self.slicer_config.first_layer_height) /
                                       self.slicer_config.layer_height + 1)
         self.contours = []
-        for intersection in range(self.layer_count):
-            self.contours.append(Contour())
+        for i in range(self.layer_count):
+            z = self.slicer_config.first_layer_height + i * self.slicer_config.layer_height
+            self.contours.append(Contour(z))
 
         # center model and set its z_min to 0
         t = numpy.array([-(model.bounding_box.x_max+model.bounding_box.x_min) / 2,
@@ -322,14 +323,14 @@ class Slicer:
                          -model.bounding_box.z_min], numpy.float32)
 
         vertices = numpy.add(model.vertices, t)
-        vertices = numpy.multiply(vertices, VERTEX_PRECISION)
+        vertices = numpy.multiply(vertices, self.slicer_config.VERTEX_PRECISION)
         self.vertices = vertices.astype(numpy.int32)
 
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self):
-        first_layer_height = int(self.slicer_config.first_layer_height * VERTEX_PRECISION)
-        layer_height = int(self.slicer_config.layer_height * VERTEX_PRECISION)
+        first_layer_height = int(self.slicer_config.first_layer_height * self.slicer_config.VERTEX_PRECISION)
+        layer_height = int(self.slicer_config.layer_height * self.slicer_config.VERTEX_PRECISION)
 
         triangle_no = 0
         for i, j, k in self.indices:
@@ -346,12 +347,3 @@ class Slicer:
                     self.cancelled = self.update_func()
                     if self.cancelled:
                         break
-
-
-if __name__ == "__main__":
-    import model
-
-    m = model.Model.from_file("../test.stl")
-    s = Slicer(m, 0.3, 0.2)
-    s.slice()
-    print(s.get_sliced_model_outlines())

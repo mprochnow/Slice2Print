@@ -15,6 +15,8 @@
 
 
 class SlicerConfig:
+    VERTEX_PRECISION = 1000.0
+
     def __init__(self):
         self.first_layer_height = None
         self.layer_height = None
@@ -31,3 +33,7 @@ class SlicerConfig:
     @property
     def extrusion_width(self):
         return self.nozzle_diameter * 1.2
+
+    @property
+    def extrusion_width_external_perimeter(self):
+        return self.nozzle_diameter * 1.05

@@ -59,13 +59,13 @@ class MainFrameController:
             self.frame.layer_view.view_all()
 
     def slice_model(self):
-        with dialog.SlicerDialog(self.frame,
-                                 self.model,
-                                 self.settings.get_slicer_config()) as dlg:
+        slicer_config = self.settings.get_slicer_config()
+
+        with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
             if dlg.slice_model() == wx.ID_OK:
                 segments = dlg.get_sliced_model()
                 segments = numpy.array(segments, numpy.float32).flatten()
-                segments = segments.astype(numpy.float32) / slicer.VERTEX_PRECISION
+                segments = segments.astype(numpy.float32) / slicer_config.VERTEX_PRECISION
 
                 self.frame.notebook.SetSelection(1)
 

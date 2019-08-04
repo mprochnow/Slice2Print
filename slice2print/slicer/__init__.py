@@ -1,5 +1,6 @@
 from .config import SlicerConfig
-from .slicer import Slicer, VERTEX_PRECISION
+from .slicer import Slicer
+from .sliced_model import SlicedModel
 
 
 class ModelSlicer:
@@ -8,39 +9,45 @@ class ModelSlicer:
         self.model = model
         self.update_func = update_func
 
-        update_interval = self.model.facet_count // 100 if self.model.facet_count > 100 else self.model.facet_count
-        self.slicer = slicer.Slicer(self.model, self.cfg, update_func, update_interval)
+        self.slicer = slicer.Slicer(self.cfg, self.model, update_func)
+
+        self.sliced_model = None
 
     def execute(self):
         self.slicer.slice()
+
+        if not self.slicer.cancelled:
+            self.sliced_model = SlicedModel(self.cfg, self.slicer.contours)
 
     def cancelled(self):
         return self.slicer.cancelled
 
     def get_sliced_model_outlines(self):
         """
-        :return: list of pairs of vertices describing a lin [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
+        :return: list of pairs of vertices describing a line [[[x1, y1, z1], [x2, y2, z2]], ...] (for now)
         """
         model = []
-        for contour in self.slicer.contours:
-            for intersections in contour:
-                p1 = p2 = None
 
-                for intersection in intersections:
-                    if p1 is None:
-                        p1 = intersection
-                    elif p2 is None:
-                        p2 = intersection
-                    else:
-                        p1 = p2
-                        p2 = intersection
+        if self.sliced_model:
+            for layer in self.sliced_model.layers:
+                z = layer.z * self.cfg.VERTEX_PRECISION
+                for layer_part in layer:
+                    p1 = p2 = None
 
-                    if p1 is not None and p2 is not None:
-                        model.append([[*p1.intersection], [*p2.intersection]])
+                    for point in layer_part.external_perimeter:
+                        if p1 is None:
+                            p1 = (point[0], point[1], z)
+                        elif p2 is None:
+                            p2 = (point[0], point[1], z)
+                        else:
+                            p1 = p2
+                            p2 = (point[0], point[1], z)
 
-                if intersections.closed:
-                    model.append([[*intersections.last.intersection],
-                                         [*intersections.first.intersection]])
+                        if p1 is not None and p2 is not None:
+                            model.append([p1, p2])
+
+                    model.append([(layer_part.external_perimeter[-1][0], layer_part.external_perimeter[-1][1], z),
+                                  (layer_part.external_perimeter[0][0], layer_part.external_perimeter[0][1], z)])
 
         return model
 
