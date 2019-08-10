@@ -16,26 +16,41 @@
 import pyclipper
 
 
-class LayerPart:
-    def __init__(self, cfg, external_perimeter):
-        self.external_perimeter = external_perimeter
-        self.perimeters = []
-
-        # TODO Add a small overlap to fill the void area between two perimeters
-        for i in range(1, cfg.perimeters):
-            pco = pyclipper.PyclipperOffset()
-            pco.AddPath(external_perimeter, pyclipper.JT_SQUARE, pyclipper.ET_CLOSEDPOLYGON)
-            solution = pco.Execute(-i*cfg.extrusion_width*cfg.VERTEX_PRECISION)
-            self.perimeters.append(solution)
-
-
 class Layer:
-    def __init__(self, z):
+    def __init__(self, cfg, z):
         self.layer_parts = []
+        self.perimeters = []
+        self.cfg = cfg
         self.z = z
 
-    def add_layer_part(self, island):
-        self.layer_parts.append(island)
+    def add_layer_part(self, layer_part):
+        self.layer_parts.append(layer_part)
+
+    def create_perimeters(self):
+        self._create_external_perimeters()
+        self._create_internal_perimeters()
+
+    def _create_external_perimeters(self):
+        pco = pyclipper.PyclipperOffset()
+
+        for layer_part in self.layer_parts:
+            pco.AddPath(layer_part, pyclipper.JT_SQUARE, pyclipper.ET_CLOSEDPOLYGON)
+
+        solution = pco.Execute(-self.cfg.extrusion_width_external_perimeter / 2 * self.cfg.VERTEX_PRECISION)
+
+        self.perimeters.append(solution)
+
+    def _create_internal_perimeters(self):
+        for i in range(1, self.cfg.perimeters):
+            pco = pyclipper.PyclipperOffset()
+
+            for layer_part in self.perimeters[0]:
+                # TODO Add a small overlap to fill the void area between two perimeters
+                pco.AddPath(layer_part, pyclipper.JT_SQUARE, pyclipper.ET_CLOSEDPOLYGON)
+
+            solution = pco.Execute(-i * self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
+
+            self.perimeters.append(solution)
 
     def __iter__(self):
         yield from self.layer_parts
@@ -46,21 +61,18 @@ class SlicedModel:
         self.layers = []
 
         for contour in contours:
-            layer = Layer(contour.z)
+            layer = Layer(cfg, contour.z)
 
             for intersections in contour:
-                path = []
+                layer_part = []
 
                 for intersection in intersections:
-                    path.append((intersection.vertex.x, intersection.vertex.y))
+                    layer_part.append((intersection.vertex.x, intersection.vertex.y))
 
-                pco = pyclipper.PyclipperOffset()
-                pco.AddPath(path, pyclipper.JT_SQUARE, pyclipper.ET_CLOSEDPOLYGON)
-
-                for i in range(cfg.perimeters):
-                    solution = pco.Execute(-cfg.extrusion_width_external_perimeter/2*cfg.VERTEX_PRECISION)
-
-                    for p in solution:
-                        layer.add_layer_part(LayerPart(cfg, p))
+                layer.add_layer_part(layer_part)
 
             self.layers.append(layer)
+
+    def create_perimeters(self):
+        for layer in self.layers:
+            layer.create_perimeters()
