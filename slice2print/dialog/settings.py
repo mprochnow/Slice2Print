@@ -23,6 +23,7 @@ class SettingsDialog(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title="Settings", size=wx.DefaultSize)
 
+        # Build volume
         build_volume_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Build volume"), wx.HORIZONTAL)
 
         self.ctrl_build_volume_x = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
@@ -31,7 +32,8 @@ class SettingsDialog(wx.Dialog):
         self.ctrl_build_volume_x.SetLimited(True)
         build_volume_sizer.Add(self.ctrl_build_volume_x, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
-        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
+        build_volume_sizer.Add(
+            wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_build_volume_y = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
         self.ctrl_build_volume_y.SetAllowNegative(False)
@@ -39,7 +41,8 @@ class SettingsDialog(wx.Dialog):
         self.ctrl_build_volume_y.SetLimited(True)
         build_volume_sizer.Add(self.ctrl_build_volume_y, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
-        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
+        build_volume_sizer.Add(
+            wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "x"), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.ctrl_build_volume_z = wx.lib.masked.numctrl.NumCtrl(build_volume_sizer.GetStaticBox(), wx.ID_ANY)
         self.ctrl_build_volume_z.SetAllowNegative(False)
@@ -47,9 +50,11 @@ class SettingsDialog(wx.Dialog):
         self.ctrl_build_volume_z.SetLimited(True)
         build_volume_sizer.Add(self.ctrl_build_volume_z, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
-        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL)
+        build_volume_sizer.Add(wx.StaticText(build_volume_sizer.GetStaticBox(), wx.ID_ANY, "mm"),
+                               0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 7)
 
         e_sizer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, "Extruder"), wx.VERTICAL)
+
         # Nozzle diameter
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "Nozzle diameter", size=wx.Size(LABEL_WIDTH, -1)),
@@ -62,9 +67,9 @@ class SettingsDialog(wx.Dialog):
         sizer.Add(self.ctrl_nozzle_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
 
         sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0,
-                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
+                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.RIGHT, 7)
 
-        e_sizer.Add(sizer, 0)
+        e_sizer.Add(sizer, 0, wx.EXPAND)
 
         # Filament diameter
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -78,9 +83,9 @@ class SettingsDialog(wx.Dialog):
         sizer.Add(self.ctrl_filament_diameter, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
 
         sizer.Add(wx.StaticText(e_sizer.GetStaticBox(), wx.ID_ANY, "mm"), 0,
-                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+                  wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.RIGHT | wx.BOTTOM, 7)
 
-        e_sizer.Add(sizer, 0)
+        e_sizer.Add(sizer, 0, wx.EXPAND)
 
         btn_sizer = self.CreateButtonSizer(wx.OK | wx.CANCEL)
 
