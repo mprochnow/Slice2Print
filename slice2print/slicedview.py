@@ -1,0 +1,46 @@
+# This file is part of Slice2Print.
+#
+# Slice2Print is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Slice2Print is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
+
+import wx
+
+import glmesh
+import glview
+
+
+class SlicedView(wx.Panel):
+    def __init__(self, parent, build_volume):
+        wx.Panel.__init__(self, parent)
+
+        self.gl_canvas = glview.GlCanvas(self)
+        self.slider = wx.Slider(self, wx.ID_ANY, 0, 0, 100, style=wx.SL_INVERSE | wx.SL_LEFT)
+        self.layer_label = wx.StaticText(self, wx.ID_ANY, "10000", style=wx.ALIGN_CENTER_HORIZONTAL)
+
+        slider_sizer = wx.BoxSizer(wx.VERTICAL)
+        slider_sizer.Add(self.slider, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        slider_sizer.Add(self.layer_label, 0, wx.ALIGN_CENTER_HORIZONTAL)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.gl_canvas, 1, wx.EXPAND)
+        sizer.Add(slider_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 7)
+        self.SetSizer(sizer)
+        self.Layout()
+
+        self.gl_canvas.set_platform_mesh(glmesh.PlatformMesh(build_volume))
+
+    def set_model_mesh(self, model_mesh):
+        self.gl_canvas.set_model_mesh(model_mesh)
+
+    def view_all(self):
+        self.gl_canvas.view_all()

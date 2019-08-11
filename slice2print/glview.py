@@ -190,6 +190,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
     def on_paint(self, event):
         if not self.initialized:
             self.initialized = True
+            self.SetCurrent(self.context)
 
             glEnable(GL_DEPTH_TEST)
 
