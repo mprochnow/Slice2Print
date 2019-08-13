@@ -22,7 +22,7 @@ class ModelSlicer:
             self.sliced_model.create_perimeters()
 
             # intermediate fix to close the progress dialog
-            self.update_func()
+            self.update_func(0, "")
 
     def cancelled(self):
         return self.slicer.cancelled

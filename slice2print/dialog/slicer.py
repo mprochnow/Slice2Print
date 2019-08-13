@@ -67,17 +67,13 @@ class SlicerDialog(wx.Dialog):
     def get_sliced_model(self):
         return self.slicer.get_sliced_model_outlines()
 
-    # TODO Make text to show in overlay a parameter of this method
-    def update(self):
-        wx.CallAfter(self._update)
+    def update(self, progress, msg):
+        wx.CallAfter(self._update, progress, msg)
         return self.cancel
 
-    def _update(self):
-        value = self.gauge.GetValue()+1
-        triangles = value * self.update_interval
-
-        self.gauge.SetValue(value)
-        self.staticText.SetLabel("%s/%s triangles processed" % (triangles, self.model.facet_count))
+    def _update(self, progress, msg):
+        self.gauge.SetValue(progress)
+        self.staticText.SetLabel(msg)
 
         self.thread.join(0.02)
         if not self.thread.is_alive():

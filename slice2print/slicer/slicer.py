@@ -344,6 +344,8 @@ class Slicer:
                     self.contours[intersection.layer].add(intersection)
 
                 if self.update_func is not None and triangle_no % self.update_interval == 0:
-                    self.cancelled = self.update_func()
+                    msg = "%s/%s triangles sliced" % (triangle_no, self.model.facet_count)
+
+                    self.cancelled = self.update_func(triangle_no // self.update_interval, msg)
                     if self.cancelled:
                         break
