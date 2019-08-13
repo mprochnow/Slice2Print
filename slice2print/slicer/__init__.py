@@ -18,6 +18,7 @@ class ModelSlicer:
 
         if not self.slicer.cancelled:
             self.sliced_model = SlicedModel(self.cfg, self.slicer.contours)
+            self.sliced_model.merge_intersecting_meshes()
             self.sliced_model.create_perimeters()
 
             # intermediate fix to close the progress dialog

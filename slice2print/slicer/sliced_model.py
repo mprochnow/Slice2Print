@@ -26,6 +26,16 @@ class Layer:
     def add_layer_part(self, layer_part):
         self.layer_parts.append(layer_part)
 
+    def merge_intersecting_layer_parts(self):
+        pc = pyclipper.Pyclipper()
+
+        for layer_part in self.layer_parts:
+            pc.AddPath(layer_part, pyclipper.PT_SUBJECT, True)
+
+        solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+
+        self.layer_parts = solution
+
     def create_perimeters(self):
         self._create_external_perimeters()
         self._create_internal_perimeters()
@@ -72,6 +82,10 @@ class SlicedModel:
                 layer.add_layer_part(layer_part)
 
             self.layers.append(layer)
+
+    def merge_intersecting_meshes(self):
+        for layer in self.layers:
+            layer.merge_intersecting_layer_parts()
 
     def create_perimeters(self):
         for layer in self.layers:
