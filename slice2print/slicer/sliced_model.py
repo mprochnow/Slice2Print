@@ -30,7 +30,8 @@ class Layer:
         pc = pyclipper.Pyclipper()
 
         for layer_part in self.layer_parts:
-            pc.AddPath(layer_part, pyclipper.PT_SUBJECT, True)
+            if len(layer_part) > 1:
+                pc.AddPath(layer_part, pyclipper.PT_SUBJECT, True)
 
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
