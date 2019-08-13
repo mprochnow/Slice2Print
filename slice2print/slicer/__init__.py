@@ -20,6 +20,9 @@ class ModelSlicer:
             self.sliced_model = SlicedModel(self.cfg, self.slicer.contours)
             self.sliced_model.create_perimeters()
 
+            # intermediate fix to close the progress dialog
+            self.update_func()
+
     def cancelled(self):
         return self.slicer.cancelled
 
