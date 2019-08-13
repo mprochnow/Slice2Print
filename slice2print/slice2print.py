@@ -71,6 +71,7 @@ class MainFrameController:
 
                 self.frame.sliced_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
                 self.frame.sliced_view.view_all()
+                self.frame.sliced_view.set_layer_count(dlg.slicer.sliced_model.layer_count)
 
     def settings_dialog(self):
         with dialog.SettingsDialog(self.frame) as dlg:

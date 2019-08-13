@@ -76,3 +76,7 @@ class SlicedModel:
     def create_perimeters(self):
         for layer in self.layers:
             layer.create_perimeters()
+
+    @property
+    def layer_count(self):
+        return len(self.layers)

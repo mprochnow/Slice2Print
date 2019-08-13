@@ -24,12 +24,13 @@ class SlicedView(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         self.gl_canvas = glview.GlCanvas(self)
-        self.slider = wx.Slider(self, wx.ID_ANY, 0, 0, 100, style=wx.SL_INVERSE | wx.SL_LEFT)
-        self.layer_label = wx.StaticText(self, wx.ID_ANY, "10000", style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.slider = wx.Slider(self, wx.ID_ANY, 1, 1, 100, style=wx.SL_INVERSE | wx.SL_LEFT)
+        self.layer_label = wx.StaticText(self, wx.ID_ANY, "10000", style=wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL)
 
         slider_sizer = wx.BoxSizer(wx.VERTICAL)
-        slider_sizer.Add(self.slider, 1, wx.ALIGN_CENTER_HORIZONTAL)
+        slider_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer:"), 0, wx.ALIGN_CENTER_HORIZONTAL)
         slider_sizer.Add(self.layer_label, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        slider_sizer.Add(self.slider, 1, wx.ALIGN_CENTER_HORIZONTAL)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.gl_canvas, 1, wx.EXPAND)
@@ -37,10 +38,22 @@ class SlicedView(wx.Panel):
         self.SetSizer(sizer)
         self.Layout()
 
+        self.Bind(wx.EVT_SLIDER, self.on_slider, id=self.slider.GetId())
+
         self.gl_canvas.set_platform_mesh(glmesh.PlatformMesh(build_volume))
+
+    def on_slider(self, event):
+        self.layer_label.SetLabelText(str(event.GetInt()))
+        self.Layout()
 
     def set_model_mesh(self, model_mesh):
         self.gl_canvas.set_model_mesh(model_mesh)
 
     def view_all(self):
         self.gl_canvas.view_all()
+
+    def set_layer_count(self, layer_count):
+        self.slider.SetRange(1, layer_count)
+        self.slider.SetValue(layer_count)
+        self.layer_label.SetLabelText(str(layer_count))
+        self.Layout()
