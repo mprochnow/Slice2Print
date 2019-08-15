@@ -334,32 +334,47 @@ class LayerMesh:
 
     @classmethod
     def from_sliced_model(cls, sliced_model, bb):
-        vertices = []
+        vertices_count = 0
 
         for layer in sliced_model.layers:
-            z = layer.z * sliced_model.cfg.VERTEX_PRECISION
-
             for perimeter in layer.perimeters:
                 for path in perimeter:
-                    p1 = p2 = None
+                    vertices_count += len(path) * 2
+
+        vertices = numpy.zeros([vertices_count, 3], dtype=numpy.float32)
+
+        i = 0
+        for layer in sliced_model.layers:
+            for perimeter in layer.perimeters:
+                for path in perimeter:
+                    first = last = p1 = p2 = None
 
                     for point in path:
+                        x = point[0] / sliced_model.cfg.VERTEX_PRECISION
+                        y = point[1] / sliced_model.cfg.VERTEX_PRECISION
+                        z = layer.z
+
                         if p1 is None:
-                            p1 = (point[0], point[1], z)
+                            p1 = (x, y, z)
+                            first = p1
                         elif p2 is None:
-                            p2 = (point[0], point[1], z)
+                            p2 = (x, y, z)
                         else:
                             p1 = p2
-                            p2 = (point[0], point[1], z)
+                            p2 = (x, y, z)
+                            last = p2
 
                         if p1 is not None and p2 is not None:
-                            vertices.append([p1, p2])
+                            vertices[i] = p1
+                            vertices[i+1] = p2
+                            i += 2
 
-                    vertices.append([(path[-1][0], path[-1][1], z),
-                                  (path[0][0], path[0][1], z)])
+                    # close the loop
+                    vertices[i] = first
+                    vertices[i+1] = last
+                    i += 2
 
         vertices = numpy.array(vertices, numpy.float32).flatten()
-        vertices = vertices.astype(numpy.float32) / sliced_model.cfg.VERTEX_PRECISION
 
         return cls(vertices, bb)
 
