@@ -332,6 +332,37 @@ class LayerMesh:
         # OpenGL z-axis points in a different direction, so we have to flip the model
         self.model_matrix = rotate_x(-90)
 
+    @classmethod
+    def from_sliced_model(cls, sliced_model, bb):
+        vertices = []
+
+        for layer in sliced_model.layers:
+            z = layer.z * sliced_model.cfg.VERTEX_PRECISION
+
+            for perimeter in layer.perimeters:
+                for path in perimeter:
+                    p1 = p2 = None
+
+                    for point in path:
+                        if p1 is None:
+                            p1 = (point[0], point[1], z)
+                        elif p2 is None:
+                            p2 = (point[0], point[1], z)
+                        else:
+                            p1 = p2
+                            p2 = (point[0], point[1], z)
+
+                        if p1 is not None and p2 is not None:
+                            vertices.append([p1, p2])
+
+                    vertices.append([(path[-1][0], path[-1][1], z),
+                                  (path[0][0], path[0][1], z)])
+
+        vertices = numpy.array(vertices, numpy.float32).flatten()
+        vertices = vertices.astype(numpy.float32) / sliced_model.cfg.VERTEX_PRECISION
+
+        return cls(vertices, bb)
+
     def init(self):
         self.initialized = True
 

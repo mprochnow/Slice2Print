@@ -64,13 +64,11 @@ class MainFrameController:
 
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
             if dlg.slice_model() == wx.ID_OK:
-                segments = dlg.get_sliced_model()
-                segments = numpy.array(segments, numpy.float32).flatten()
-                segments = segments.astype(numpy.float32) / slicer_config.VERTEX_PRECISION
-
                 self.frame.notebook.SetSelection(1)
 
-                self.frame.sliced_view.set_model_mesh(glmesh.LayerMesh(segments, self.model.bounding_box))
+                mesh = glmesh.LayerMesh.from_sliced_model(dlg.slicer.sliced_model, self.model.bounding_box)
+
+                self.frame.sliced_view.set_model_mesh(mesh)
                 self.frame.sliced_view.view_all()
                 self.frame.sliced_view.set_layer_count(dlg.slicer.sliced_model.layer_count)
 

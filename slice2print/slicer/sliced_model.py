@@ -70,6 +70,7 @@ class Layer:
 class SlicedModel:
     def __init__(self, cfg, contours):
         self.layers = []
+        self.cfg = cfg
 
         for contour in contours:
             layer = Layer(cfg, contour.z)
