@@ -14,6 +14,7 @@
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
 import ctypes
+import sys
 
 import numpy
 import wx
@@ -284,12 +285,13 @@ class MainFrame(wx.Frame):
 
 
 if __name__ == "__main__":
-    # https://docs.microsoft.com/en-us/windows/desktop/api/Winuser/nf-winuser-setthreaddpiawarenesscontext
-    ctypes.windll.user32.SetProcessDpiAwarenessContext(-4)
+    if sys.platform == "win32":
+        # https://docs.microsoft.com/en-us/windows/desktop/api/Winuser/nf-winuser-setthreaddpiawarenesscontext
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(-4)
 
-    # https://github.com/prusa3d/PrusaSlicer/blob/563a1a8441dbb7586a167c4bdce0e083e3774980/src/slic3r/GUI/GUI_Utils.hpp#L39
-    # https://github.com/prusa3d/PrusaSlicer/blob/eebb9e3fe79cbda736bf95349c5c403ec4aef184/src/slic3r/GUI/GUI_App.cpp#L90
-    # https://github.com/prusa3d/PrusaSlicer/blob/563a1a8441dbb7586a167c4bdce0e083e3774980/src/slic3r/GUI/GUI_Utils.hpp#L55
+        # https://github.com/prusa3d/PrusaSlicer/blob/563a1a8441dbb7586a167c4bdce0e083e3774980/src/slic3r/GUI/GUI_Utils.hpp#L39
+        # https://github.com/prusa3d/PrusaSlicer/blob/eebb9e3fe79cbda736bf95349c5c403ec4aef184/src/slic3r/GUI/GUI_App.cpp#L90
+        # https://github.com/prusa3d/PrusaSlicer/blob/563a1a8441dbb7586a167c4bdce0e083e3774980/src/slic3r/GUI/GUI_Utils.hpp#L55
 
     app = wx.App()
     frame = MainFrame()
