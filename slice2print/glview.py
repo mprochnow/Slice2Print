@@ -127,7 +127,6 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.mouse_x = 0
         self.mouse_y = 0
 
-        self.Bind(wx.EVT_SHOW, self.on_show)
         self.Bind(wx.EVT_SIZE, self.on_size)
         self.Bind(wx.EVT_PAINT, self.on_paint)
 
@@ -180,12 +179,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
 
         self.Refresh()
 
-    def on_show(self, event):
-        if event.IsShown():
-            self.update_viewport()
-
     def on_size(self, event):
-        if self.IsShown():
+        if self.IsShownOnScreen():
             self.update_viewport()
 
     def on_paint(self, event):
@@ -199,6 +194,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
             glClearColor(1, 1, 0.9, 1)
+
+            self.update_viewport()
 
             if self.platform_mesh:
                 d = self.platform_mesh.dimensions
