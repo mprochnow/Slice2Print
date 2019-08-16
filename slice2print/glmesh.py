@@ -17,7 +17,7 @@ from glhelpers import *
 
 
 BASIC_VERTEX_SHADER = """
-    #version 150
+    #version 130
 
     in vec3 vertex_position;
 
@@ -35,7 +35,7 @@ BASIC_VERTEX_SHADER = """
 """
 
 BASIC_FRAGMENT_SHADER = """
-    #version 150
+    #version 130
 
     in vec4 color;
     out vec4 frag_colour;
@@ -47,7 +47,7 @@ BASIC_FRAGMENT_SHADER = """
 
 
 MODEL_VERTEX_SHADER = """
-    #version 150
+    #version 130
 
     in vec3 vertex_normal;
     in vec3 vertex_position;
@@ -64,7 +64,7 @@ MODEL_VERTEX_SHADER = """
     void main() {
         gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertex_position, 1.0);
 
-        vec3 normal_eye = vec3(transpose(inverse(view_matrix * model_matrix)) * vec4(vertex_normal, 0.0));
+        vec3 normal_eye = vec3(transpose(transpose(view_matrix * model_matrix)) * vec4(vertex_normal, 0.0));
 
         float light = 0.2 + abs(dot(normalize(normal_eye), normalize(light_position)));
 
@@ -160,7 +160,7 @@ class ModelMesh:
 
 
 PLATFORM_VERTEX_SHADER = """
-    #version 150
+    #version 130
 
     in vec3 vertex_position;
 
@@ -176,7 +176,7 @@ PLATFORM_VERTEX_SHADER = """
 """
 
 PLATFORM_FRAGMENT_SHADER = """
-    #version 150
+    #version 130
 
     in vec3 pos;
     out vec4 frag_colour;
