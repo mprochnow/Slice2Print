@@ -227,7 +227,7 @@ class MainFrame(wx.Frame):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.options_panel, 0, wx.EXPAND | wx.LEFT, 7)
-        sizer.Add(self.notebook, 1, wx.EXPAND | wx.LEFT, 7)
+        sizer.Add(self.notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 7)
         panel.SetSizer(sizer)
         self.Layout()
 
