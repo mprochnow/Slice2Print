@@ -26,6 +26,7 @@ import icons
 import model
 import settings
 import slicedview
+import struct
 
 
 class MainFrameController:
@@ -48,8 +49,8 @@ class MainFrameController:
 
                     self.frame.status_bar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
-                except Exception as e:
-                    d = wx.MessageDialog(self, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
+                except (AssertionError, IOError, ValueError, struct.error) as e:
+                    d = wx.MessageDialog(self.frame, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
 
     def view_all(self):
