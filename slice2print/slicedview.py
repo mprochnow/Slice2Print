@@ -24,7 +24,7 @@ class SlicedView(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         self.gl_canvas = glview.GlCanvas(self)
-        self.slider = wx.Slider(self, wx.ID_ANY, 1, 1, 2, style=wx.SL_INVERSE | wx.SL_LEFT)
+        self.slider = wx.Slider(self, wx.ID_ANY, 1, 1, 2, style=wx.SL_INVERSE | wx.SL_LEFT | wx.SL_VERTICAL)
         self.layer_label = wx.StaticText(self, wx.ID_ANY, "1", style=wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL)
 
         slider_sizer = wx.BoxSizer(wx.VERTICAL)
