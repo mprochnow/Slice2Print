@@ -19,7 +19,7 @@ import glmesh
 import glview
 
 
-class SlicedView(wx.Panel):
+class LayerView(wx.Panel):
     def __init__(self, parent, build_volume):
         wx.Panel.__init__(self, parent)
 

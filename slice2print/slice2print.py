@@ -25,7 +25,7 @@ import glview
 import icons
 import model
 import settings
-import slicedview
+import layerview
 import struct
 
 
@@ -221,7 +221,7 @@ class MainFrame(wx.Frame):
 
         self.notebook = wx.Notebook(panel)
         self.model_view = glview.GlCanvas(self.notebook)
-        self.sliced_view = slicedview.SlicedView(self.notebook, self.settings.build_volume)
+        self.sliced_view = layerview.LayerView(self.notebook, self.settings.build_volume)
 
         self.notebook.AddPage(self.model_view, "3D Model")
         self.notebook.AddPage(self.sliced_view, "Sliced Model")
