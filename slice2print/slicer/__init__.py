@@ -17,7 +17,7 @@ class ModelSlicer:
         self.slicer.slice()
 
         if not self.slicer.cancelled:
-            self.sliced_model = SlicedModel(self.cfg, self.slicer.contours)
+            self.sliced_model = SlicedModel(self.cfg, self.model.bounding_box, self.slicer.contours)
             self.sliced_model.merge_intersecting_meshes()
             self.sliced_model.create_perimeters()
 

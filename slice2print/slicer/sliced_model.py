@@ -68,9 +68,10 @@ class Layer:
 
 
 class SlicedModel:
-    def __init__(self, cfg, contours):
+    def __init__(self, cfg, bounding_box, contours):
         self.layers = []
         self.cfg = cfg
+        self.bounding_box = bounding_box
 
         for contour in contours:
             layer = Layer(cfg, contour.z)

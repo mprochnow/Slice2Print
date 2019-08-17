@@ -333,7 +333,7 @@ class LayerMesh:
         self.model_matrix = rotate_x(-90)
 
     @classmethod
-    def from_sliced_model(cls, sliced_model, bb):
+    def from_sliced_model(cls, sliced_model):
         vertices_count = 0
 
         for layer in sliced_model.layers:
@@ -376,7 +376,7 @@ class LayerMesh:
 
         vertices = numpy.array(vertices, numpy.float32).flatten()
 
-        return cls(vertices, bb)
+        return cls(vertices, sliced_model.bounding_box)
 
     def init(self):
         self.initialized = True

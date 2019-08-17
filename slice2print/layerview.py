@@ -43,12 +43,13 @@ class LayerView(wx.Panel):
         self.slider.Enable(False)
         self.gl_canvas.set_platform_mesh(glmesh.PlatformMesh(build_volume))
 
-    def on_slider(self, event):
-        self.layer_label.SetLabelText(str(event.GetInt()))
-        self.Layout()
+    def set_sliced_model(self, sliced_model):
+        self.set_layer_count(sliced_model.layer_count)
 
-    def set_model_mesh(self, model_mesh):
-        self.gl_canvas.set_model_mesh(model_mesh)
+        mesh = glmesh.LayerMesh.from_sliced_model(sliced_model)
+
+        self.gl_canvas.set_model_mesh(mesh)
+        self.view_all()
 
     def view_all(self):
         self.gl_canvas.view_all()
@@ -60,4 +61,8 @@ class LayerView(wx.Panel):
 
         self.layer_label.SetLabelText(str(layer_count))
 
+        self.Layout()
+
+    def on_slider(self, event):
+        self.layer_label.SetLabelText(str(event.GetInt()))
         self.Layout()

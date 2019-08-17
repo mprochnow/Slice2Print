@@ -58,7 +58,7 @@ class MainFrameController:
         if page == 0:
             self.frame.model_view.view_all()
         elif page == 1:
-            self.frame.sliced_view.view_all()
+            self.frame.layer_view.view_all()
 
     def slice_model(self):
         slicer_config = self.settings.get_slicer_config()
@@ -66,12 +66,7 @@ class MainFrameController:
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
             if dlg.slice_model() == wx.ID_OK:
                 self.frame.notebook.SetSelection(1)
-
-                mesh = glmesh.LayerMesh.from_sliced_model(dlg.slicer.sliced_model, self.model.bounding_box)
-
-                self.frame.sliced_view.set_model_mesh(mesh)
-                self.frame.sliced_view.view_all()
-                self.frame.sliced_view.set_layer_count(dlg.slicer.sliced_model.layer_count)
+                self.frame.layer_view.set_sliced_model(dlg.slicer.sliced_model)
 
     def settings_dialog(self):
         with dialog.SettingsDialog(self.frame) as dlg:
@@ -221,10 +216,10 @@ class MainFrame(wx.Frame):
 
         self.notebook = wx.Notebook(panel)
         self.model_view = glview.GlCanvas(self.notebook)
-        self.sliced_view = layerview.LayerView(self.notebook, self.settings.build_volume)
+        self.layer_view = layerview.LayerView(self.notebook, self.settings.build_volume)
 
         self.notebook.AddPage(self.model_view, "3D Model")
-        self.notebook.AddPage(self.sliced_view, "Sliced Model")
+        self.notebook.AddPage(self.layer_view, "Sliced Model")
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.options_panel, 0, wx.EXPAND | wx.LEFT, 7)
