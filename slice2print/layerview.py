@@ -64,5 +64,10 @@ class LayerView(wx.Panel):
         self.Layout()
 
     def on_slider(self, event):
-        self.layer_label.SetLabelText(str(event.GetInt()))
+        layer = event.GetInt()
+
+        self.layer_label.SetLabelText(str(layer))
         self.Layout()
+
+        self.gl_canvas.model_mesh.set_layers_to_draw(layer)
+        self.gl_canvas.Refresh()

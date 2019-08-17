@@ -316,10 +316,13 @@ class PlatformMesh:
 
 
 class LayerMesh:
-    def __init__(self, vertices, bounding_box):
+    def __init__(self, vertices, bounding_box, layer_count, vertices_count_at_layer):
         self.initialized = False
         self.vertices = vertices
         self.bounding_box = bounding_box
+        self.layer_count = layer_count
+        self.vertices_count_at_layer = vertices_count_at_layer
+        self.layers_to_draw = layer_count
 
         self.program = None
         self.buffer = None
@@ -334,12 +337,15 @@ class LayerMesh:
 
     @classmethod
     def from_sliced_model(cls, sliced_model):
+        vertices_count_at_layer = []
         vertices_count = 0
 
         for layer in sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
                     vertices_count += len(path) * 2
+
+            vertices_count_at_layer.append(vertices_count)
 
         vertices = numpy.zeros([vertices_count, 3], dtype=numpy.float32)
 
@@ -376,7 +382,7 @@ class LayerMesh:
 
         vertices = numpy.array(vertices, numpy.float32).flatten()
 
-        return cls(vertices, sliced_model.bounding_box)
+        return cls(vertices, sliced_model.bounding_box, sliced_model.layer_count, vertices_count_at_layer)
 
     def init(self):
         self.initialized = True
@@ -409,6 +415,10 @@ class LayerMesh:
     def update_projection_matrix(self, matrix):
         self.projection_matrix = matrix
 
+    def set_layers_to_draw(self, layers_to_draw):
+        assert 1 <= layers_to_draw <= self.layer_count, "Value of parameter layers_to_draw not within range"
+        self.layers_to_draw = layers_to_draw
+
     def draw(self):
         if not self.initialized:
             self.init()
@@ -420,4 +430,4 @@ class LayerMesh:
             glBindVertexArray(self.vao)
 
             with self.buffer:
-                glDrawArrays(GL_LINES, 0, len(self.buffer))
+                glDrawArrays(GL_LINES, 0, self.vertices_count_at_layer[self.layers_to_draw - 1])
