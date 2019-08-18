@@ -16,7 +16,6 @@
 import ctypes
 import sys
 
-import numpy
 import wx
 
 import dialog
@@ -222,8 +221,8 @@ class MainFrame(wx.Frame):
         self.notebook.AddPage(self.layer_view, "Sliced Model")
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.options_panel, 0, wx.EXPAND | wx.LEFT, 7)
-        sizer.Add(self.notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 7)
+        sizer.Add(self.options_panel, 0, wx.EXPAND | wx.LEFT | wx.BOTTOM, 7)
+        sizer.Add(self.notebook, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 7)
         panel.SetSizer(sizer)
         self.Layout()
 
