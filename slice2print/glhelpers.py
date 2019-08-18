@@ -161,5 +161,3 @@ class GlBuffer:
 
     def __exit__(self, typ, val, tb):
         glBindBuffer(self.target, 0)
-
-
