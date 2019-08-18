@@ -49,7 +49,7 @@ class LayerView(wx.Panel):
     def set_sliced_model(self, sliced_model):
         self.set_layer_count(sliced_model.layer_count)
 
-        mesh = LayerMesh.from_sliced_model(sliced_model)
+        mesh = LayerMesh(sliced_model)
 
         self.gl_canvas.set_model_mesh(mesh)
         self.view_all()
@@ -77,17 +77,22 @@ class LayerView(wx.Panel):
 
 
 class LayerMesh:
-    def __init__(self, vertices, bounding_box, layer_count, vertices_count_at_layer):
+    def __init__(self, sliced_model):
         self.initialized = False
-        self.vertices = vertices
-        self.bounding_box = bounding_box
-        self.layer_count = layer_count
-        self.vertices_count_at_layer = vertices_count_at_layer
-        self.layers_to_draw = layer_count
-
         self.program = None
         self.buffer = None
         self.vao = None
+
+        self.bounding_box = sliced_model.bounding_box
+        self.layer_count = sliced_model.layer_count
+        self.layers_to_draw = sliced_model.layer_count
+
+        self.vertices_count = 0
+        self.vertices_count_at_layer = []
+
+        self.count_vertices(sliced_model)
+        self.vertices = numpy.zeros([self.vertices_count, 3], dtype=numpy.float32)
+        self.create_vertices(sliced_model)
 
         self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
         self.view_matrix = numpy.identity(4, numpy.float32)
@@ -96,20 +101,15 @@ class LayerMesh:
         # OpenGL z-axis points in a different direction, so we have to flip the model
         self.model_matrix = rotate_x(-90)
 
-    @classmethod
-    def from_sliced_model(cls, sliced_model):
-        vertices_count_at_layer = []
-        vertices_count = 0
-
+    def count_vertices(self, sliced_model):
         for layer in sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
-                    vertices_count += len(path) * 2
+                    self.vertices_count += len(path) * 2
 
-            vertices_count_at_layer.append(vertices_count)
+            self.vertices_count_at_layer.append(self.vertices_count)
 
-        vertices = numpy.zeros([vertices_count, 3], dtype=numpy.float32)
-
+    def create_vertices(self, sliced_model):
         i = 0
         for layer in sliced_model.layers:
             for perimeter in layer.perimeters:
@@ -132,18 +132,16 @@ class LayerMesh:
                             last = p2
 
                         if p1 is not None and p2 is not None:
-                            vertices[i] = p1
-                            vertices[i+1] = p2
+                            self.vertices[i] = p1
+                            self.vertices[i+1] = p2
                             i += 2
 
                     # close the loop
-                    vertices[i] = first
-                    vertices[i+1] = last
+                    self.vertices[i] = first
+                    self.vertices[i+1] = last
                     i += 2
 
-        vertices = numpy.array(vertices, numpy.float32).flatten()
-
-        return cls(vertices, sliced_model.bounding_box, sliced_model.layer_count, vertices_count_at_layer)
+        self.vertices = self.vertices.ravel()
 
     def init(self):
         self.initialized = True
