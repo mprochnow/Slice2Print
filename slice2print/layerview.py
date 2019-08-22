@@ -114,34 +114,20 @@ class LayerMesh:
         for layer in sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
-                    first = last = p1 = p2 = None
+                    # Add to every entry of path a third column with layer height
+                    a = numpy.append(path,
+                                     numpy.full((len(path), 1), layer.z, self.vertices.dtype),
+                                     axis=1)
 
-                    for point in path:
-                        x = point[0] / sliced_model.cfg.VERTEX_PRECISION
-                        y = point[1] / sliced_model.cfg.VERTEX_PRECISION
-                        z = layer.z
+                    # Interweave points of path to create lines and close loop
+                    # e.g. (p1, p2, p3) => ((p1, p2), (p2, p3), (p3, p1))
+                    l = len(path) * 2
+                    self.vertices[i:i+l:2] = a
+                    self.vertices[i+1:i+l+1:2] = numpy.concatenate([a[1:], a[:1]])
 
-                        if p1 is None:
-                            p1 = (x, y, z)
-                            first = p1
-                        elif p2 is None:
-                            p2 = (x, y, z)
-                        else:
-                            p1 = p2
-                            p2 = (x, y, z)
-                            last = p2
+                    i += l
 
-                        if p1 is not None and p2 is not None:
-                            self.vertices[i] = p1
-                            self.vertices[i+1] = p2
-                            i += 2
-
-                    # close the loop
-                    self.vertices[i] = first
-                    self.vertices[i+1] = last
-                    i += 2
-
-        self.vertices = self.vertices.ravel()
+        self.vertices = self.vertices.ravel() / sliced_model.cfg.VERTEX_PRECISION
 
     def init(self):
         self.initialized = True

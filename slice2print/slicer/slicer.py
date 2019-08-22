@@ -305,16 +305,17 @@ class Slicer:
         """
         self.cancelled = False
         self.model = model
-        self.slicer_config = slicer_config
         self.update_func = update_func
+        self.first_layer_height = int(slicer_config.first_layer_height * slicer_config.VERTEX_PRECISION)
+        self.layer_height = int(slicer_config.layer_height * slicer_config.VERTEX_PRECISION)
 
         self.update_interval = self.model.facet_count // 100 if self.model.facet_count > 100 else self.model.facet_count
 
-        self.layer_count = math.floor((self.model.dimensions.z - self.slicer_config.first_layer_height) /
-                                      self.slicer_config.layer_height + 1)
+        self.layer_count = math.floor((self.model.dimensions.z - slicer_config.first_layer_height) /
+                                      slicer_config.layer_height + 1)
         self.contours = []
         for i in range(self.layer_count):
-            z = self.slicer_config.first_layer_height + i * self.slicer_config.layer_height
+            z = self.first_layer_height + i * self.layer_height
             self.contours.append(Contour(z))
 
         # center model and set its z_min to 0
@@ -323,15 +324,12 @@ class Slicer:
                          -model.bounding_box.z_min], numpy.float32)
 
         vertices = numpy.add(model.vertices, t)
-        vertices = numpy.multiply(vertices, self.slicer_config.VERTEX_PRECISION)
+        vertices = numpy.multiply(vertices, slicer_config.VERTEX_PRECISION)
         self.vertices = vertices.astype(numpy.int32)
 
         self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
 
     def slice(self):
-        first_layer_height = int(self.slicer_config.first_layer_height * self.slicer_config.VERTEX_PRECISION)
-        layer_height = int(self.slicer_config.layer_height * self.slicer_config.VERTEX_PRECISION)
-
         triangle_no = 0
         for i, j, k in self.indices:
             triangle_no += 1
@@ -340,7 +338,7 @@ class Slicer:
             triangle = Triangle(v1, v2, v3)
 
             if triangle.vz_min.z != triangle.vz_max.z:
-                for intersection in triangle.slice(first_layer_height, layer_height):
+                for intersection in triangle.slice(self.first_layer_height, self.layer_height):
                     self.contours[intersection.layer].add(intersection)
 
                 if self.update_func is not None and triangle_no % self.update_interval == 0:
