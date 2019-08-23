@@ -87,11 +87,9 @@ class LayerMesh:
         self.layer_count = sliced_model.layer_count
         self.layers_to_draw = sliced_model.layer_count
 
-        self.vertices_count = 0
         self.vertices_count_at_layer = []
+        self.vertices = numpy.zeros((0, 3), dtype=numpy.float32)
 
-        self.count_vertices(sliced_model)
-        self.vertices = numpy.zeros([self.vertices_count, 3], dtype=numpy.float32)
         self.create_vertices(sliced_model)
 
         self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
@@ -100,14 +98,6 @@ class LayerMesh:
 
         # OpenGL z-axis points in a different direction, so we have to flip the model
         self.model_matrix = rotate_x(-90)
-
-    def count_vertices(self, sliced_model):
-        for layer in sliced_model.layers:
-            for perimeter in layer.perimeters:
-                for path in perimeter:
-                    self.vertices_count += len(path) * 2
-
-            self.vertices_count_at_layer.append(self.vertices_count)
 
     def create_vertices(self, sliced_model):
         i = 0
@@ -119,13 +109,17 @@ class LayerMesh:
                                      numpy.full((len(path), 1), layer.z, self.vertices.dtype),
                                      axis=1)
 
+                    # Resize array to contain new elements
+                    self.vertices.resize(i+len(path)*2, 3)
+
                     # Interweave points of path to create lines and close loop
                     # e.g. (p1, p2, p3) => ((p1, p2), (p2, p3), (p3, p1))
-                    l = len(path) * 2
-                    self.vertices[i:i+l:2] = a
-                    self.vertices[i+1:i+l+1:2] = numpy.concatenate([a[1:], a[:1]])
+                    self.vertices[i::2] = a
+                    self.vertices[i+1::2] = numpy.concatenate([a[1:], a[:1]])
 
-                    i += l
+                    i += len(path)*2
+
+            self.vertices_count_at_layer.append(i)
 
         self.vertices = self.vertices.ravel() / sliced_model.cfg.VERTEX_PRECISION
 
