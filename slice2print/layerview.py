@@ -170,3 +170,88 @@ class LayerMesh:
 
             with self.buffer:
                 glDrawArrays(GL_LINES, 0, self.vertices_count_at_layer[self.layers_to_draw - 1])
+
+
+class PathToMesh:
+    def __init__(self, path, extrusion_width):
+        self.path = path
+        self.extrusion_width = extrusion_width
+
+    def create_mesh(self):
+        vertices = self._create_vertices()
+        indices = self._create_indices()
+
+        return vertices, indices
+
+    def _create_vertices(self):
+        normals = self._create_normals_from_path()
+        bisectors = self._create_bisectors_from_normals(normals)
+        bisector_cosines = self._create_bisector_cosines_from_normals(normals)
+
+        lengths = 0.5*self.extrusion_width / bisector_cosines
+
+        bisectors *= lengths[:, numpy.newaxis]
+
+        inner_path = self.path + bisectors
+        inner_path = numpy.repeat(inner_path, 2, 0)
+        inner_path = numpy.roll(inner_path, -1, 0)
+
+        outer_path = self.path - bisectors
+        outer_path = numpy.repeat(outer_path, 2, 0)
+        outer_path = numpy.roll(outer_path, -1, 0)
+
+        vertices = numpy.empty((len(inner_path)+len(outer_path), 2), numpy.float32)
+        vertices[::2] = inner_path
+        vertices[1::2] = outer_path
+
+        return vertices
+
+    def _create_indices(self):
+        indices = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
+        indices = numpy.repeat(indices, len(self.path), 0)
+        indices += numpy.arange(0, len(self.path) * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
+
+        return indices
+
+    def _create_normals_from_path(self):
+        # calculate direction vectors
+        vectors = numpy.roll(self.path, -1, 0) - self.path
+
+        # calculate normals of each vector
+        normals = numpy.empty(vectors.shape, numpy.float32)
+        normals[:, 0], normals[:, 1] = -vectors[:, 1], vectors[:, 0]
+
+        return self._normalize(normals)
+
+    def _create_bisectors_from_normals(self, normals):
+        bisectors = numpy.roll(normals, 1, 0) + normals
+
+        return self._normalize(bisectors)
+
+    def _create_bisector_cosines_from_normals(self, normals):
+        dot_products = self._dot_product(numpy.roll(normals, 1, 0), normals)
+        # Half-angle formula: cos(x)/2 = sqrt((1+cos(x))/2)
+        return numpy.sqrt((1 + dot_products)/2)
+
+    @staticmethod
+    def _normalize(a):
+        return a / numpy.sqrt((a[:, 0]**2) + a[:, 1]**2)[:, numpy.newaxis]
+
+    @staticmethod
+    def _dot_product(a, b):
+        return numpy.sum(a * b, axis=1)
+
+
+if __name__ == "__main__":
+    extrusion_width = 2.0
+
+    path = numpy.array([[-10, -10],
+                        [10, -10],
+                        [10, 10],
+                        [-10, 10]])
+
+    p2m = PathToMesh(path, extrusion_width)
+    vertices, indices = p2m.create_mesh()
+
+    print(vertices)
+    print(indices)
