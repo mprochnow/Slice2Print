@@ -173,15 +173,17 @@ class LayerMesh:
 
 
 class PathToMesh:
-    def __init__(self, path, extrusion_width):
+    def __init__(self, path, extrusion_width, z_height):
         self.path = path
         self.extrusion_width = extrusion_width
+        self.z_height = z_height
 
     def create_mesh(self):
         vertices = self._create_vertices()
+        normals = self._create_vertex_normals()
         indices = self._create_indices()
 
-        return vertices, indices
+        return vertices, normals, indices
 
     def _create_vertices(self):
         normals = self._create_normals_from_path()
@@ -204,7 +206,16 @@ class PathToMesh:
         vertices[::2] = inner_path
         vertices[1::2] = outer_path
 
+        # Add to every vertex a third column with the layer height
+        vertices = numpy.append(vertices,
+                                numpy.full((len(vertices), 1), self.z_height, vertices.dtype),
+                                axis=1)
+
         return vertices
+
+    def _create_vertex_normals(self):
+        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4, 0)
+
 
     def _create_indices(self):
         indices = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
@@ -244,14 +255,15 @@ class PathToMesh:
 
 if __name__ == "__main__":
     extrusion_width = 2.0
-
+    z_height = 1.0
     path = numpy.array([[-10, -10],
                         [10, -10],
                         [10, 10],
                         [-10, 10]])
 
-    p2m = PathToMesh(path, extrusion_width)
-    vertices, indices = p2m.create_mesh()
+    p2m = PathToMesh(path, extrusion_width, z_height)
+    vertices, normals, indices = p2m.create_mesh()
 
     print(vertices)
+    print(normals)
     print(indices)
