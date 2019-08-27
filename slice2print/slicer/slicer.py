@@ -309,7 +309,7 @@ class Slicer:
         self.first_layer_height = int(slicer_config.first_layer_height * slicer_config.VERTEX_PRECISION)
         self.layer_height = int(slicer_config.layer_height * slicer_config.VERTEX_PRECISION)
 
-        self.update_interval = self.model.facet_count // 100 if self.model.facet_count > 100 else self.model.facet_count
+        self.update_interval = self.model.facet_count // 100
 
         self.layer_count = math.floor((self.model.dimensions.z - slicer_config.first_layer_height) /
                                       slicer_config.layer_height + 1)
@@ -344,6 +344,6 @@ class Slicer:
                 if self.update_func is not None and triangle_no % self.update_interval == 0:
                     msg = "%s/%s triangles sliced" % (triangle_no, self.model.facet_count)
 
-                    self.cancelled = self.update_func(triangle_no // self.update_interval, msg)
+                    self.cancelled = self.update_func(int(triangle_no / self.model.facet_count * 100), msg)
                     if self.cancelled:
                         break

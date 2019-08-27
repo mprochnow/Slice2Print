@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
-import threading
-
 import wx
 
 import slicer
@@ -29,7 +27,6 @@ class SlicerDialog(wx.Dialog):
         self.cancel = False
         self.model = model
         self.slicer_config = slicer_config
-        self.update_interval = model.facet_count // 100 if model.facet_count > 100 else model.facet_count
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -47,6 +44,7 @@ class SlicerDialog(wx.Dialog):
         sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 7)
 
         self.Bind(wx.EVT_BUTTON, self.on_cancel, id=btn_cancel.GetId())
+        self.Bind(wx.EVT_SHOW, self.on_show)
 
         self.SetSizer(sizer)
         self.Layout()
@@ -57,24 +55,20 @@ class SlicerDialog(wx.Dialog):
     def on_cancel(self, event):
         self.cancel = True
 
-    def slice_model(self):
-        self.slicer = slicer.ModelSlicer(self.slicer_config, self.model, self.update)
-        self.thread = threading.Thread(target=self.slicer.execute)
-        self.thread.start()
+    def on_show(self, event):
+        if event.IsShown() and self.slicer is None:
+            self.slicer = slicer.ModelSlicer(self.slicer_config, self.model, self.update)
+            self.slicer.execute()
 
-        return self.ShowModal()
-
-    def get_sliced_model(self):
-        return self.slicer.get_sliced_model_outlines()
+            self.EndModal(wx.ID_CANCEL if self.cancel else wx.ID_OK)
 
     def update(self, progress, msg):
-        wx.CallAfter(self._update, progress, msg)
-        return self.cancel
-
-    def _update(self, progress, msg):
         self.gauge.SetValue(progress)
         self.staticText.SetLabel(msg)
 
-        self.thread.join(0.02)
-        if not self.thread.is_alive():
-            self.EndModal(wx.ID_CANCEL if self.slicer.cancelled() else wx.ID_OK)
+        wx.Yield()
+
+        return self.cancel
+
+    def get_sliced_model(self):
+        return self.slicer.get_sliced_model_outlines()

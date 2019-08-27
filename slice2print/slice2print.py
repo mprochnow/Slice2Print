@@ -60,11 +60,11 @@ class MainFrameController:
             self.frame.layer_view.view_all()
 
     def slice_model(self):
+        self.frame.notebook.SetSelection(1)
         slicer_config = self.settings.get_slicer_config()
 
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
-            if dlg.slice_model() == wx.ID_OK:
-                self.frame.notebook.SetSelection(1)
+            if dlg.ShowModal() == wx.ID_OK:
                 self.frame.layer_view.set_sliced_model(dlg.slicer.sliced_model)
 
     def settings_dialog(self):
