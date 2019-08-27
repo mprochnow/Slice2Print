@@ -80,17 +80,15 @@ class LayerMesh:
     def __init__(self, sliced_model):
         self.initialized = False
         self.program = None
-        self.buffer = None
+        self.vertex_buffer = None
         self.vao = None
 
+        self.sliced_model = sliced_model
         self.bounding_box = sliced_model.bounding_box
         self.layer_count = sliced_model.layer_count
         self.layers_to_draw = sliced_model.layer_count
 
         self.vertices_count_at_layer = []
-        self.vertices = numpy.zeros((0, 3), dtype=numpy.float32)
-
-        self.create_vertices(sliced_model)
 
         self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
         self.view_matrix = numpy.identity(4, numpy.float32)
@@ -99,42 +97,20 @@ class LayerMesh:
         # OpenGL z-axis points in a different direction, so we have to flip the model
         self.model_matrix = rotate_x(-90)
 
-    def create_vertices(self, sliced_model):
-        i = 0
-        for layer in sliced_model.layers:
-            for perimeter in layer.perimeters:
-                for path in perimeter:
-                    # Add to every entry of path a third column with layer height
-                    a = numpy.append(path,
-                                     numpy.full((len(path), 1), layer.z, self.vertices.dtype),
-                                     axis=1)
-
-                    # Resize array to contain new elements
-                    self.vertices.resize(i+len(path)*2, 3)
-
-                    # Interweave points of path to create lines and close loop
-                    # e.g. (p1, p2, p3) => ((p1, p2), (p2, p3), (p3, p1))
-                    self.vertices[i::2] = a
-                    self.vertices[i+1::2] = numpy.concatenate([a[1:], a[:1]])
-
-                    i += len(path)*2
-
-            self.vertices_count_at_layer.append(i)
-
-        self.vertices = self.vertices.ravel() / sliced_model.cfg.VERTEX_PRECISION
-
     def init(self):
         self.initialized = True
 
+        vertices = self.create_mesh(self.sliced_model)
+
         self.program = ShaderProgram(glmesh.BASIC_VERTEX_SHADER, glmesh.BASIC_FRAGMENT_SHADER)
-        self.buffer = GlBuffer(self.vertices, GL_ARRAY_BUFFER)
+        self.vertex_buffer = GlBuffer(vertices, GL_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
 
         vertex_position_index = self.program.get_attrib_location("vertex_position")
 
-        with self.buffer:
+        with self.vertex_buffer:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_position_index)
 
@@ -144,8 +120,34 @@ class LayerMesh:
             self.program.view_matrix = self.view_matrix
             self.program.projection_matrix = self.projection_matrix
 
+    def create_mesh(self, sliced_model):
+        vertices = numpy.zeros((0, 3), dtype=numpy.float32)
+
+        i = 0
+        for layer in sliced_model.layers:
+            for perimeter in layer.perimeters:
+                for path in perimeter:
+                    # Add to every entry of path a third column with layer height
+                    a = numpy.append(path,
+                                     numpy.full((len(path), 1), layer.z, vertices.dtype),
+                                     axis=1)
+
+                    # Resize array to contain new elements
+                    vertices.resize(i+len(path)*2, 3)
+
+                    # Interweave points of path to create lines and close loop
+                    # e.g. (p1, p2, p3) => ((p1, p2), (p2, p3), (p3, p1))
+                    vertices[i::2] = a
+                    vertices[i+1::2] = numpy.concatenate([a[1:], a[:1]])
+
+                    i += len(path)*2
+
+            self.vertices_count_at_layer.append(i)
+
+        return vertices.ravel() / sliced_model.cfg.VERTEX_PRECISION
+
     def delete(self):
-        self.buffer.delete()
+        self.vertex_buffer.delete()
         glDeleteVertexArrays(1, [self.vao])
 
     def update_view_matrix(self, matrix):
@@ -168,7 +170,7 @@ class LayerMesh:
 
             glBindVertexArray(self.vao)
 
-            with self.buffer:
+            with self.vertex_buffer:
                 glDrawArrays(GL_LINES, 0, self.vertices_count_at_layer[self.layers_to_draw - 1])
 
 
