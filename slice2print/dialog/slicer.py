@@ -57,6 +57,9 @@ class SlicerDialog(wx.Dialog):
 
     def on_show(self, event):
         if event.IsShown() and self.slicer is None:
+            wx.CallAfter(self.slice)
+
+    def slice(self):
             self.slicer = slicer.ModelSlicer(self.slicer_config, self.model, self.update)
             self.slicer.execute()
 
