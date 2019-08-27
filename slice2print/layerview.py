@@ -81,6 +81,8 @@ class LayerMesh:
         self.initialized = False
         self.program = None
         self.vertex_buffer = None
+        self.normal_buffer = None
+        self.index_buffer = None
         self.vao = None
 
         self.sliced_model = sliced_model
@@ -90,7 +92,7 @@ class LayerMesh:
 
         self.vertices_count_at_layer = []
 
-        self.model_color = numpy.array([0.0, 0.0, 0.0, 1.0], numpy.float32)
+        self.model_color = numpy.array([1.0, 0.5, 0.0, 1.0], numpy.float32)
         self.view_matrix = numpy.identity(4, numpy.float32)
         self.projection_matrix = numpy.identity(4, numpy.float32)
 
@@ -100,19 +102,26 @@ class LayerMesh:
     def init(self):
         self.initialized = True
 
-        vertices = self.create_mesh(self.sliced_model)
+        v, n, i = self.create_mesh()
 
-        self.program = ShaderProgram(glmesh.BASIC_VERTEX_SHADER, glmesh.BASIC_FRAGMENT_SHADER)
-        self.vertex_buffer = GlBuffer(vertices, GL_ARRAY_BUFFER)
+        self.program = ShaderProgram(glmesh.MODEL_VERTEX_SHADER, glmesh.BASIC_FRAGMENT_SHADER)
+        self.vertex_buffer = GlBuffer(v, GL_ARRAY_BUFFER)
+        self.normal_buffer = GlBuffer(n, GL_ARRAY_BUFFER)
+        self.index_buffer = GlBuffer(i, GL_ELEMENT_ARRAY_BUFFER)
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
 
         vertex_position_index = self.program.get_attrib_location("vertex_position")
+        vertex_normal_index = self.program.get_attrib_location("vertex_normal")
 
         with self.vertex_buffer:
             glVertexAttribPointer(vertex_position_index, 3, GL_FLOAT, GL_FALSE, 0, None)
             glEnableVertexAttribArray(vertex_position_index)
+
+        with self.normal_buffer:
+            glVertexAttribPointer(vertex_normal_index, 3, GL_FLOAT, GL_FALSE, 0, None)
+            glEnableVertexAttribArray(vertex_normal_index)
 
         with self.program:
             self.program.model_color = self.model_color
@@ -120,31 +129,25 @@ class LayerMesh:
             self.program.view_matrix = self.view_matrix
             self.program.projection_matrix = self.projection_matrix
 
-    def create_mesh(self, sliced_model):
-        vertices = numpy.zeros((0, 3), dtype=numpy.float32)
+    def create_mesh(self):
+        vertices = numpy.empty(0, numpy.float32)
+        normals = numpy.empty(0, numpy.float32)
+        indices = numpy.empty(0, numpy.uint32)
 
-        i = 0
-        for layer in sliced_model.layers:
+        for layer in self.sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
-                    # Add to every entry of path a third column with layer height
-                    a = numpy.append(path,
-                                     numpy.full((len(path), 1), layer.z, vertices.dtype),
-                                     axis=1)
+                    v, n, i = PathToMesh(self.sliced_model.cfg, layer.z, path).create_mesh()
 
-                    # Resize array to contain new elements
-                    vertices.resize(i+len(path)*2, 3)
+                    v /= self.sliced_model.cfg.VERTEX_PRECISION
 
-                    # Interweave points of path to create lines and close loop
-                    # e.g. (p1, p2, p3) => ((p1, p2), (p2, p3), (p3, p1))
-                    vertices[i::2] = a
-                    vertices[i+1::2] = numpy.concatenate([a[1:], a[:1]])
+                    indices = numpy.concatenate((indices, len(vertices)//3+i))
+                    vertices = numpy.concatenate((vertices, v))
+                    normals = numpy.concatenate((normals, n))
 
-                    i += len(path)*2
+            self.vertices_count_at_layer.append(len(indices))
 
-            self.vertices_count_at_layer.append(i)
-
-        return vertices.ravel() / sliced_model.cfg.VERTEX_PRECISION
+        return vertices, normals, indices
 
     def delete(self):
         self.vertex_buffer.delete()
@@ -170,14 +173,14 @@ class LayerMesh:
 
             glBindVertexArray(self.vao)
 
-            with self.vertex_buffer:
-                glDrawArrays(GL_LINES, 0, self.vertices_count_at_layer[self.layers_to_draw - 1])
+            with self.index_buffer:
+                glDrawElements(GL_TRIANGLES, self.vertices_count_at_layer[self.layers_to_draw-1], GL_UNSIGNED_INT, None)
 
 
 class PathToMesh:
-    def __init__(self, path, extrusion_width, z_height):
+    def __init__(self, cfg, z_height, path):
         self.path = path
-        self.extrusion_width = extrusion_width
+        self.extrusion_width = cfg.extrusion_width * cfg.VERTEX_PRECISION
         self.z_height = z_height
 
     def create_mesh(self):
@@ -213,18 +216,17 @@ class PathToMesh:
                                 numpy.full((len(vertices), 1), self.z_height, vertices.dtype),
                                 axis=1)
 
-        return vertices
+        return vertices.ravel()
 
     def _create_vertex_normals(self):
-        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4, 0)
-
+        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4, 0).ravel()
 
     def _create_indices(self):
         indices = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
         indices = numpy.repeat(indices, len(self.path), 0)
         indices += numpy.arange(0, len(self.path) * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
-        return indices
+        return indices.ravel()
 
     def _create_normals_from_path(self):
         # calculate direction vectors
