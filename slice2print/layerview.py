@@ -192,18 +192,16 @@ class PathToMesh:
 
     def _create_vertices(self):
         normals = self._create_normals_from_path()
-        bisectors = self._create_bisectors_from_normals(normals)
+        normalized_bisectors = self._create_bisectors_from_normals(normals)
         bisector_cosines = self._create_bisector_cosines_from_normals(normals)
 
-        lengths = 0.5*self.extrusion_width / bisector_cosines
+        offsets = 0.5 * self.extrusion_width / bisector_cosines
 
-        bisectors *= lengths[:, numpy.newaxis]
-
-        inner_path = self.path + bisectors
+        inner_path = self.path + normalized_bisectors * offsets[:, numpy.newaxis]
         inner_path = numpy.repeat(inner_path, 2, 0)
         inner_path = numpy.roll(inner_path, -1, 0)
 
-        outer_path = self.path - bisectors
+        outer_path = self.path - normalized_bisectors * offsets[:, numpy.newaxis]
         outer_path = numpy.repeat(outer_path, 2, 0)
         outer_path = numpy.roll(outer_path, -1, 0)
 
@@ -255,19 +253,3 @@ class PathToMesh:
     @staticmethod
     def _dot_product(a, b):
         return numpy.sum(a * b, axis=1)
-
-
-if __name__ == "__main__":
-    extrusion_width = 2.0
-    z_height = 1.0
-    path = numpy.array([[-10, -10],
-                        [10, -10],
-                        [10, 10],
-                        [-10, 10]])
-
-    p2m = PathToMesh(path, extrusion_width, z_height)
-    vertices, normals, indices = p2m.create_mesh()
-
-    print(vertices)
-    print(normals)
-    print(indices)
