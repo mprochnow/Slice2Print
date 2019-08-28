@@ -181,6 +181,7 @@ class PathToMesh:
     def __init__(self, cfg, z_height, path):
         self.path = path
         self.extrusion_width = cfg.extrusion_width * cfg.VERTEX_PRECISION
+        self.layer_height = cfg.layer_height * cfg.VERTEX_PRECISION
         self.z_height = z_height
 
     def create_mesh(self):
@@ -216,13 +217,74 @@ class PathToMesh:
 
         return vertices.ravel()
 
+    def _create_vertices2(self):
+        normals = self._create_normals_from_path()
+        normalized_bisectors = self._create_bisectors_from_normals(normals)
+        bisector_cosines = self._create_bisector_cosines_from_normals(normals)
+
+        o1 = 0.5 * (self.extrusion_width-self.layer_height) / bisector_cosines
+        o2 = 0.5 * self.extrusion_width / bisector_cosines
+
+        vertices = numpy.empty((0, 3), numpy.float32)
+
+        top_quad = self._quad(normalized_bisectors, o1, -o1)
+        vertices = numpy.concatenate((vertices, top_quad))
+
+        top_right_quad = self._quad(normalized_bisectors, -o1, -o2)
+        top_right_quad[1::2, 2] -= self.layer_height/2
+        vertices = numpy.concatenate((vertices, top_right_quad))
+
+        bottom_quad = numpy.copy(top_quad)
+        bottom_quad[:, 2] = self.z_height - self.layer_height
+
+        bottom_right_quad = numpy.copy(top_right_quad)
+        bottom_right_quad[::2, 2] -= self.layer_height
+
+        top_left_quad = self._quad(normalized_bisectors, o1, o2)
+        top_left_quad[1::2, 2] -= self.layer_height/2
+
+        bottom_left_quad = numpy.copy(top_left_quad)
+        bottom_left_quad[::2, 2] -= self.layer_height
+
+        print(vertices)
+
+        return vertices.ravel()
+
+    def _quad(self, normalized_bisectors, inner_offsets, outer_offsets):
+        inner_path = self.path + normalized_bisectors * inner_offsets[:, numpy.newaxis]
+        inner_path = numpy.repeat(inner_path, 2, 0)
+
+        outer_path = self.path + normalized_bisectors * outer_offsets[:, numpy.newaxis]
+        outer_path = numpy.repeat(outer_path, 2, 0)
+
+        vertices = numpy.empty((len(self.path)*4, 2), numpy.float32)
+        vertices[::2] = numpy.roll(inner_path, -1, 0)
+        vertices[1::2] = numpy.roll(outer_path, -1, 0)
+
+        # Add to every vertex a third column with the layer height
+        vertices = numpy.append(vertices,
+                                numpy.full((len(vertices), 1), self.z_height, vertices.dtype),
+                                axis=1)
+        return vertices
+
     def _create_vertex_normals(self):
-        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4, 0).ravel()
+        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4 * 2, 0).ravel()
+
+    def _create_vertex_normals2(self):
+        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4 * 2, 0).ravel()
 
     def _create_indices(self):
         indices = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
         indices = numpy.repeat(indices, len(self.path), 0)
         indices += numpy.arange(0, len(self.path) * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
+
+        return indices.ravel()
+
+    def _create_indices2(self):
+        indices = numpy.concatenate((numpy.repeat(numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32), len(self.path), 0),
+                                     numpy.repeat(numpy.array([[4, 5, 6, 6, 5, 7]], numpy.uint32), len(self.path), 0)))
+
+        indices += numpy.arange(0, len(self.path) * 8, 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
         return indices.ravel()
 
