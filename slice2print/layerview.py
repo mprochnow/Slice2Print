@@ -14,7 +14,7 @@
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
 from OpenGL.GL import *
-import numpy
+import numpy.linalg
 import wx
 
 from glhelpers import GlBuffer, rotate_x, ShaderProgram
@@ -189,6 +189,9 @@ class PathToMesh:
         normals = self._create_vertex_normals()
         indices = self._create_indices()
 
+        # vertices, normals = self._create_vertices2()
+        # indices = self._create_indices2()
+
         return vertices, normals, indices
 
     def _create_vertices(self):
@@ -226,31 +229,40 @@ class PathToMesh:
         o2 = 0.5 * self.extrusion_width / bisector_cosines
 
         vertices = numpy.empty((0, 3), numpy.float32)
+        normals = numpy.empty((0, 3), numpy.float32)
 
-        top_quad = self._quad(normalized_bisectors, o1, -o1)
+        top_quad = self._create_quad(normalized_bisectors, o1, -o1)
         vertices = numpy.concatenate((vertices, top_quad))
+        normals = numpy.concatenate((normals, numpy.full(top_quad.shape,
+                                                         self._create_vertex_normal_from_quad(top_quad),
+                                                         numpy.float32)))
 
-        top_right_quad = self._quad(normalized_bisectors, -o1, -o2)
+        top_right_quad = self._create_quad(normalized_bisectors, -o1, -o2)
         top_right_quad[1::2, 2] -= self.layer_height/2
         vertices = numpy.concatenate((vertices, top_right_quad))
+        normals = numpy.concatenate((normals, numpy.full(top_right_quad.shape,
+                                                         self._create_vertex_normal_from_quad(top_right_quad),
+                                                         numpy.float32)))
 
-        bottom_quad = numpy.copy(top_quad)
-        bottom_quad[:, 2] = self.z_height - self.layer_height
-
-        bottom_right_quad = numpy.copy(top_right_quad)
-        bottom_right_quad[::2, 2] -= self.layer_height
-
-        top_left_quad = self._quad(normalized_bisectors, o1, o2)
+        top_left_quad = self._create_quad(normalized_bisectors, o1, o2)
         top_left_quad[1::2, 2] -= self.layer_height/2
+        vertices = numpy.concatenate((vertices, top_left_quad))
+        normals = numpy.concatenate((normals, numpy.full(top_left_quad.shape,
+                                                         self._create_vertex_normal_from_quad(top_left_quad),
+                                                         numpy.float32)))
 
-        bottom_left_quad = numpy.copy(top_left_quad)
-        bottom_left_quad[::2, 2] -= self.layer_height
+        # bottom_quad = numpy.copy(top_quad)
+        # bottom_quad[:, 2] = self.z_height - self.layer_height
+        #
+        # bottom_right_quad = numpy.copy(top_right_quad)
+        # bottom_right_quad[::2, 2] -= self.layer_height
+        #
+        # bottom_left_quad = numpy.copy(top_left_quad)
+        # bottom_left_quad[::2, 2] -= self.layer_height
 
-        print(vertices)
+        return vertices.ravel(), normals.ravel()
 
-        return vertices.ravel()
-
-    def _quad(self, normalized_bisectors, inner_offsets, outer_offsets):
+    def _create_quad(self, normalized_bisectors, inner_offsets, outer_offsets):
         inner_path = self.path + normalized_bisectors * inner_offsets[:, numpy.newaxis]
         inner_path = numpy.repeat(inner_path, 2, 0)
 
@@ -265,12 +277,14 @@ class PathToMesh:
         vertices = numpy.append(vertices,
                                 numpy.full((len(vertices), 1), self.z_height, vertices.dtype),
                                 axis=1)
+
         return vertices
 
-    def _create_vertex_normals(self):
-        return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4 * 2, 0).ravel()
+    def _create_vertex_normal_from_quad(self, quad):
+        normal = numpy.cross(quad[1]-quad[0], quad[3]-quad[1])
+        return normal / numpy.linalg.norm(normal)
 
-    def _create_vertex_normals2(self):
+    def _create_vertex_normals(self):
         return numpy.repeat(numpy.array([[0.0, 0.0, 1.0]], numpy.float32), len(self.path) * 4 * 2, 0).ravel()
 
     def _create_indices(self):
@@ -282,9 +296,10 @@ class PathToMesh:
 
     def _create_indices2(self):
         indices = numpy.concatenate((numpy.repeat(numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32), len(self.path), 0),
-                                     numpy.repeat(numpy.array([[4, 5, 6, 6, 5, 7]], numpy.uint32), len(self.path), 0)))
+                                     numpy.repeat(numpy.array([[4, 5, 6, 6, 5, 7]], numpy.uint32), len(self.path), 0),
+                                     numpy.repeat(numpy.array([[8, 9, 10, 10, 9, 11]], numpy.uint32), len(self.path), 0)))
 
-        indices += numpy.arange(0, len(self.path) * 8, 4, dtype=numpy.uint32)[:, numpy.newaxis]
+        indices += numpy.arange(0, len(self.path) * 12, 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
         return indices.ravel()
 
