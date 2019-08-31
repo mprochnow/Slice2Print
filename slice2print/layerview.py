@@ -21,6 +21,9 @@ from glhelpers import GlBuffer, rotate_x, ShaderProgram
 import glmesh
 import glview
 
+# import cProfile
+
+
 class LayerView(wx.Panel):
     def __init__(self, parent, build_volume):
         wx.Panel.__init__(self, parent)
@@ -133,6 +136,9 @@ class LayerMesh:
         normals = numpy.empty(0, numpy.float32)
         indices = numpy.empty(0, numpy.uint32)
 
+        # cp = cProfile.Profile()
+        # cp.enable()
+
         for layer in self.sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
@@ -145,6 +151,9 @@ class LayerMesh:
                     normals = numpy.concatenate((normals, n))
 
             self.vertices_count_at_layer.append(len(indices))
+
+        # cp.disable()
+        # cp.print_stats()
 
         return vertices, normals, indices
 
@@ -207,15 +216,23 @@ class PathToMesh:
 
         vertices = numpy.empty((4*len(path)*4, 3), numpy.float32)
 
+        # .\
+        # ..
         vertices[:len(path)*4:2] = center_path
         vertices[1:len(path)*4:2] = outer_path - [0.0, 0.0, self.layer_height/2]
 
+        # /.
+        # ..
         vertices[len(path)*4:2*len(path)*4:2] = inner_path - [0.0, 0.0, self.layer_height/2]
         vertices[len(path)*4+1:2*len(path)*4:2] = center_path
 
+        # ..
+        # ./
         vertices[2*len(path)*4:3*len(path)*4:2] = outer_path - [0.0, 0.0, self.layer_height/2]
         vertices[2*len(path)*4+1:3*len(path)*4:2] = center_path - [0.0, 0.0, self.layer_height]
 
+        # ..
+        # \.
         vertices[3*len(path)*4:4*len(path)*4:2] = center_path - [0.0, 0.0, self.layer_height]
         vertices[3*len(path)*4+1:4*len(path)*4:2] = inner_path - [0.0, 0.0, self.layer_height/2]
 
