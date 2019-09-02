@@ -21,8 +21,6 @@ from glhelpers import GlBuffer, rotate_x, ShaderProgram
 import glmesh
 import glview
 
-# import cProfile
-
 
 class LayerView(wx.Panel):
     def __init__(self, parent, build_volume):
@@ -132,30 +130,31 @@ class LayerMesh:
             self.program.projection_matrix = self.projection_matrix
 
     def create_mesh(self):
-        vertices = numpy.empty(0, numpy.float32)
-        normals = numpy.empty(0, numpy.float32)
-        indices = numpy.empty(0, numpy.uint32)
+        vertices = numpy.empty((self.sliced_model.vertex_count * 16, 3), numpy.float32)
+        normals = numpy.empty((self.sliced_model.vertex_count * 16, 3), numpy.float32)
+        indices = numpy.empty((self.sliced_model.vertex_count * 4, 6), numpy.uint32)
 
-        # cp = cProfile.Profile()
-        # cp.enable()
+        p2m = PathToMesh(self.sliced_model.cfg)
 
+        vertex_count = 0
         for layer in self.sliced_model.layers:
             for perimeter in layer.perimeters:
                 for path in perimeter:
-                    v, n, i = PathToMesh(self.sliced_model.cfg, layer.z, path).create_mesh()
+                    path_length = len(path)
 
-                    v /= self.sliced_model.cfg.VERTEX_PRECISION
+                    v = vertices[vertex_count*16:(vertex_count+path_length)*16]
+                    n = normals[vertex_count*16:(vertex_count+path_length)*16]
+                    i = indices[vertex_count*4:(vertex_count+path_length)*4]
 
-                    indices = numpy.concatenate((indices, len(vertices)//3+i))
-                    vertices = numpy.concatenate((vertices, v))
-                    normals = numpy.concatenate((normals, n))
+                    p2m.create_mesh(v, n, i, path, layer.z)
 
-            self.vertices_count_at_layer.append(len(indices))
+                    i += vertex_count * 16
 
-        # cp.disable()
-        # cp.print_stats()
+                    vertex_count += path_length
 
-        return vertices, normals, indices
+            self.vertices_count_at_layer.append(vertex_count*4*6)
+
+        return vertices.ravel() / self.sliced_model.cfg.VERTEX_PRECISION, normals.ravel(), indices.ravel()
 
     def delete(self):
         self.vertex_buffer.delete()
@@ -188,21 +187,19 @@ class LayerMesh:
 
 
 class PathToMesh:
-    def __init__(self, cfg, z_height, path):
-        self.path = path
+    def __init__(self, cfg):
         self.extrusion_width = cfg.extrusion_width * cfg.VERTEX_PRECISION
         self.layer_height = cfg.layer_height * cfg.VERTEX_PRECISION
-        self.z_height = z_height
 
-    def create_mesh(self):
-        normals = numpy.repeat(self._create_normals_from_path(), 2, 0)
+    def create_mesh(self, vertices, vertex_normals, indices, path, z_height):
+        normals = numpy.repeat(self._create_normals_from_path(path), 2, 0)
         normals = numpy.append(normals,
                                numpy.zeros((len(normals), 1), numpy.float32),
                                axis=1)
 
         # Add to every vertex a third column with the layer height
-        path = numpy.append(self.path,
-                            numpy.full((len(self.path), 1), self.z_height, numpy.float32),
+        path = numpy.append(path,
+                            numpy.full((len(path), 1), z_height, numpy.float32),
                             axis=1)
 
         offsets = -normals * self.extrusion_width/2
@@ -213,8 +210,6 @@ class PathToMesh:
 
         inner_path = center_path - offsets
         outer_path = center_path + offsets
-
-        vertices = numpy.empty((4*len(path)*4, 3), numpy.float32)
 
         # .\
         # ..
@@ -236,23 +231,25 @@ class PathToMesh:
         vertices[3*len(path)*4:4*len(path)*4:2] = center_path - [0.0, 0.0, self.layer_height]
         vertices[3*len(path)*4+1:4*len(path)*4:2] = inner_path - [0.0, 0.0, self.layer_height/2]
 
-        vertex_normals = numpy.cross(vertices[1::4]-vertices[::4], vertices[2::4]-vertices[::4])
-        vertex_normals = self._normalize_3d(vertex_normals)
-        vertex_normals = numpy.repeat(vertex_normals, 4, 0)
+        vertex_normals_ = numpy.cross(vertices[1::4]-vertices[::4], vertices[2::4]-vertices[::4])
+        vertex_normals_ = self._normalize_3d(vertex_normals_)
+        vertex_normals_ = numpy.repeat(vertex_normals_, 4, 0)
 
-        indices = numpy.array([[0, 1, 2, 2, 1, 3],
-                               [0, 1, 2, 2, 1, 3],
-                               [0, 1, 2, 2, 1, 3],
-                               [0, 1, 2, 2, 1, 3]], numpy.uint32)
+        numpy.copyto(vertex_normals, vertex_normals_)
 
-        indices = numpy.repeat(indices, len(self.path), 0)
-        indices += numpy.arange(0, len(vertices), 4, dtype=numpy.uint32)[:, numpy.newaxis]
+        indices_ = numpy.array([[0, 1, 2, 2, 1, 3],
+                                [0, 1, 2, 2, 1, 3],
+                                [0, 1, 2, 2, 1, 3],
+                                [0, 1, 2, 2, 1, 3]], numpy.uint32)
 
-        return vertices.ravel(), vertex_normals.ravel(), indices.ravel()
+        indices_ = numpy.repeat(indices_, len(path), 0)
+        indices_ += numpy.arange(0, len(vertices), 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
-    def _create_normals_from_path(self):
+        numpy.copyto(indices, indices_)
+
+    def _create_normals_from_path(self, path):
         # calculate direction vectors
-        vectors = numpy.roll(self.path, -1, 0) - self.path
+        vectors = numpy.roll(path, -1, 0) - path
 
         # calculate normals of each vector
         normals = numpy.empty(vectors.shape, numpy.float32)
