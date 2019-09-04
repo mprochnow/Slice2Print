@@ -192,17 +192,27 @@ class PathToMesh:
         self.layer_height = cfg.layer_height * cfg.VERTEX_PRECISION
 
     def create_mesh(self, vertices, vertex_normals, indices, path, z_height):
+        # normals = self._create_normals_from_path(path)
+        # normalized_bisectors = self._create_bisectors_from_normals(normals)
+        # bisector_cosines = self._create_bisector_cosines_from_normals(normals)
+        #
+        # offsets = -normalized_bisectors * (0.5*self.extrusion_width / bisector_cosines)[:, numpy.newaxis]
+        # offsets = numpy.append(offsets,
+        #                        numpy.zeros((len(offsets), 1), numpy.float32),
+        #                        axis=1)
+        # offsets = numpy.repeat(offsets, 2, 0)
+        # offsets = numpy.roll(offsets, -1, 0)
+
         normals = numpy.repeat(self._create_normals_from_path(path), 2, 0)
         normals = numpy.append(normals,
                                numpy.zeros((len(normals), 1), numpy.float32),
                                axis=1)
+        offsets = -normals * self.extrusion_width/2
 
         # Add to every vertex a third column with the layer height
         path = numpy.append(path,
                             numpy.full((len(path), 1), z_height, numpy.float32),
                             axis=1)
-
-        offsets = -normals * self.extrusion_width/2
 
         center_path = numpy.empty((len(path)*2, 3), numpy.float32)
         center_path[::2] = path
@@ -257,6 +267,16 @@ class PathToMesh:
 
         return self._normalize_2d(normals)
 
+    def _create_bisectors_from_normals(self, normals):
+        bisectors = numpy.roll(normals, 1, 0) + normals
+
+        return self._normalize_2d(bisectors)
+
+    def _create_bisector_cosines_from_normals(self, normals):
+        dot_products = self._dot_product(numpy.roll(normals, 1, 0), normals)
+        # Half-angle formula: cos(x)/2 = sqrt((1+cos(x))/2)
+        return numpy.sqrt((1 + dot_products)/2)
+
     @staticmethod
     def _normalize_2d(a):
         return a / numpy.sqrt((a[:, 0]**2) + a[:, 1]**2)[:, numpy.newaxis]
@@ -264,3 +284,7 @@ class PathToMesh:
     @staticmethod
     def _normalize_3d(a):
         return a / numpy.sqrt((a[:, 0]**2) + a[:, 1]**2 + a[:, 2]**2)[:, numpy.newaxis]
+
+    @staticmethod
+    def _dot_product(a, b):
+        return numpy.sum(a * b, axis=1)

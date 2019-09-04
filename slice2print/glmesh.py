@@ -59,13 +59,13 @@ MODEL_VERTEX_SHADER = """
 
     out vec4 color;
 
-    vec3 light_position = vec3 (1.0, 0.0, -1.0);
+    vec3 light_position = vec3 (-1.0, 0.0, 1.0);
 
     void main() {
         gl_Position = projection_matrix * view_matrix * model_matrix * vec4(vertex_position, 1.0);
 
         vec3 normal_eye = vec3(view_matrix * model_matrix * vec4(vertex_normal, 0.0)); 
-        float light = 0.1 + acos(dot(normalize(normal_eye), normalize(light_position)))/3.1415;
+        float light = dot(normalize(normal_eye), normalize(light_position));
 
         color = vec4(model_color[0] * light,
                      model_color[1] * light,
