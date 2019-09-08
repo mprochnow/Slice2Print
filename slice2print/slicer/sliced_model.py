@@ -22,7 +22,7 @@ class Layer:
         self.perimeters = []
         self.cfg = cfg
         self.z = z
-        self.vertex_count = 0
+        self.node_count = 0
 
     def add_layer_part(self, layer_part):
         self.layer_parts.append(layer_part)
@@ -50,7 +50,7 @@ class Layer:
 
         solution = pco.Execute(-self.cfg.extrusion_width_external_perimeter / 2 * self.cfg.VERTEX_PRECISION)
         for path in solution:
-            self.vertex_count += len(path)
+            self.node_count += len(path)
 
         self.perimeters.append(solution)
 
@@ -64,7 +64,7 @@ class Layer:
 
             solution = pco.Execute(-i * self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
             for path in solution:
-                self.vertex_count += len(path)
+                self.node_count += len(path)
 
             self.perimeters.append(solution)
 
@@ -77,7 +77,7 @@ class SlicedModel:
         self.layers = []
         self.cfg = cfg
         self.bounding_box = bounding_box
-        self.vertex_count = 0
+        self.node_count = 0
 
         for contour in contours:
             layer = Layer(cfg, contour.z)
@@ -99,7 +99,7 @@ class SlicedModel:
     def create_perimeters(self):
         for layer in self.layers:
             layer.create_perimeters()
-            self.vertex_count += layer.vertex_count
+            self.node_count += layer.node_count
 
     @property
     def layer_count(self):
