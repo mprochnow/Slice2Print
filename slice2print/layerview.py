@@ -283,6 +283,7 @@ class PathToMesh:
         determinant = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]
         determinant_abs = numpy.absolute(determinant)
         directions = numpy.divide(determinant, determinant_abs, where=determinant_abs != 0)
+        directions = numpy.roll(directions, 1, 0)
 
         offsets = -normals * self.extrusion_width / 2
 
