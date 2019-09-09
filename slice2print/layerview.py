@@ -338,4 +338,5 @@ class PathToMesh:
 
     @staticmethod
     def _normalize_3d(a):
-        return a / numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
+        b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
+        return numpy.divide(a, b, where=(b != 0))
