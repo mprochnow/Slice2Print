@@ -145,7 +145,7 @@ class LayerMesh:
             self.program.projection_matrix = self.projection_matrix
 
     def create_mesh(self):
-        # Arrays will be created with needed size, this avoid expensive allocation and copy operations
+        # Arrays will be created with needed size, this avoids expensive allocation and copy operations
         vertices = numpy.zeros((self.sliced_model.node_count * VERTICES_PER_NODE, 3), numpy.float32)
         normals = numpy.zeros((self.sliced_model.node_count * NORMALS_PER_NODE, 3), numpy.float32)
         indices = numpy.zeros((self.sliced_model.node_count * INDEX_ARRAYS_PER_NODE, 6), numpy.uint32)
@@ -174,6 +174,8 @@ class LayerMesh:
 
     def delete(self):
         self.vertex_buffer.delete()
+        self.normal_buffer.delete()
+        self.index_buffer.delete()
         glDeleteVertexArrays(1, [self.vao])
 
     def update_view_matrix(self, matrix):
