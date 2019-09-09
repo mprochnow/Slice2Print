@@ -279,32 +279,33 @@ class PathToMesh:
         a = numpy.roll(path, -1, 0) - path
         b = numpy.roll(a, -1, 0)
 
-        # det > 0 => left turn, det < 0 => right turn, det == 0 => collinear
+        # determinant > 0: left turn; determinant < 0: right turn
         determinant = a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]
+        determinant = numpy.roll(determinant, 1, 0)
         determinant_abs = numpy.absolute(determinant)
-        directions = numpy.divide(determinant, determinant_abs, where=determinant_abs != 0)
-        directions = numpy.roll(directions, 1, 0)
+        directions = numpy.divide(determinant, determinant_abs, where=(determinant_abs != 0))
 
         offsets = -normals * self.extrusion_width / 2
+
+        c = path + numpy.roll(offsets, 1, 0) * directions[:, None]
+        d = path + offsets * directions[:, None]
+
+        directions_ = directions >= 0
+
+        e = numpy.where(directions_[:, None], c, d)
+        f = numpy.where(directions_[:, None], d, c)
 
         vertices_ = numpy.empty((path_length * 6, 3), numpy.float32)
 
         # upper triangle
         vertices_[:path_length * 3:3] = path
-        vertices_[1:path_length * 3:3] = path + numpy.roll(offsets, 1, 0) * directions[:, None]
-        vertices_[2:path_length * 3:3] = path + offsets * directions[:, None]
-
-        vertices_[1:path_length * 3:3] -= [0.0, 0.0, self.layer_height / 2]
-        vertices_[2:path_length * 3:3] -= [0.0, 0.0, self.layer_height / 2]
+        vertices_[1:path_length * 3:3] = e - [0.0, 0.0, self.layer_height / 2]
+        vertices_[2:path_length * 3:3] = f - [0.0, 0.0, self.layer_height / 2]
 
         # lower triangle
-        vertices_[path_length * 3:path_length * 6:3] = path
-        vertices_[path_length * 3 + 1:path_length * 6:3] = path + offsets * directions[:, None]
-        vertices_[path_length * 3 + 2:path_length * 6:3] = path + numpy.roll(offsets, 1, 0) * directions[:, None]
-
-        vertices_[path_length * 3:path_length * 6:3] -= [0.0, 0.0, self.layer_height]
-        vertices_[path_length * 3 + 1:path_length * 6:3] -= [0.0, 0.0, self.layer_height / 2]
-        vertices_[path_length * 3 + 2:path_length * 6:3] -= [0.0, 0.0, self.layer_height / 2]
+        vertices_[path_length * 3:path_length * 6:3] = path - [0.0, 0.0, self.layer_height]
+        vertices_[path_length * 3 + 1:path_length * 6:3] = f - [0.0, 0.0, self.layer_height / 2]
+        vertices_[path_length * 3 + 2:path_length * 6:3] = e - [0.0, 0.0, self.layer_height / 2]
 
         numpy.copyto(vertices, vertices_)
 
