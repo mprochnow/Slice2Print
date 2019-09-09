@@ -212,16 +212,30 @@ class PathToMesh:
         path_length = len(path)
 
         normals = self._create_normals_from_path(path)
-        normals = numpy.append(normals,
-                               numpy.zeros((len(normals), 1), numpy.float32),
-                               axis=1)
-        normals2x = numpy.repeat(normals, 2, 0)
-        offsets = -normals2x * self.extrusion_width / 2
+        # Add to every vertex a third column with value zero
+        normals = numpy.append(normals, numpy.zeros((len(normals), 1), numpy.float32), axis=1)
 
         # Add to every vertex a third column with the layer height
-        path = numpy.append(path,
-                            numpy.full((path_length, 1), z_height, numpy.float32),
-                            axis=1)
+        path = numpy.append(path, numpy.full((path_length, 1), z_height, numpy.float32), axis=1)
+
+        self._create_line_meshes(vertices[:path_length * VERTICES_PER_LINE],
+                                 vertex_normals[:path_length * VERTICES_PER_LINE],
+                                 indices[:path_length * INDEX_ARRAYS_PER_LINE],
+                                 path,
+                                 normals,
+                                 z_height)
+
+        self._create_corner_triangles(vertices[path_length * VERTICES_PER_LINE:],
+                                      vertex_normals[path_length * VERTICES_PER_LINE:],
+                                      indices[path_length * INDEX_ARRAYS_PER_LINE:],
+                                      path,
+                                      normals)
+
+    def _create_line_meshes(self, vertices, vertex_normals, indices, path, normals, z_height):
+        path_length = len(path)
+
+        normals2x = numpy.repeat(normals, 2, 0)
+        offsets = -normals2x * self.extrusion_width / 2
 
         center_path = numpy.empty((path_length * 2, 3), numpy.float32)
         center_path[::2] = path
@@ -266,12 +280,6 @@ class PathToMesh:
         indices_ += numpy.arange(0, path_length * 4 * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
         numpy.copyto(indices[:path_length * INDEX_ARRAYS_PER_LINE], indices_)
-
-        self._create_corner_triangles(vertices[path_length * VERTICES_PER_LINE:],
-                                      vertex_normals[path_length * VERTICES_PER_LINE:],
-                                      indices[path_length * INDEX_ARRAYS_PER_LINE:],
-                                      path,
-                                      normals, )
 
     def _create_corner_triangles(self, vertices, vertex_normals, indices, path, normals):
         path_length = len(path)
