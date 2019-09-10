@@ -153,7 +153,7 @@ class LayerMesh:
         p2m = PathToMesh(self.sliced_model.cfg)
 
         node_count = 0
-        for layer in self.sliced_model.layers:
+        for layer_no, layer in enumerate(self.sliced_model.layers):
             for perimeter in layer.perimeters:
                 for path in perimeter:
                     path_length = len(path)
@@ -162,7 +162,7 @@ class LayerMesh:
                     n = normals[node_count * NORMALS_PER_NODE:(node_count + path_length) * NORMALS_PER_NODE]
                     i = indices[node_count * INDEX_ARRAYS_PER_NODE:(node_count + path_length) * INDEX_ARRAYS_PER_NODE]
 
-                    p2m.create_mesh(v, n, i, path, layer.z)
+                    p2m.create_mesh(v, n, i, path, layer_no)
 
                     i += node_count * VERTICES_PER_NODE
 
@@ -170,7 +170,7 @@ class LayerMesh:
 
             self.vertices_count_at_layer.append(node_count * INDEX_ARRAYS_PER_NODE * 6)
 
-        return vertices.ravel() / self.sliced_model.cfg.VERTEX_PRECISION, normals.ravel(), indices.ravel()
+        return vertices.ravel(), normals.ravel(), indices.ravel()
 
     def delete(self):
         self.vertex_buffer.delete()
@@ -207,33 +207,41 @@ class LayerMesh:
 
 class PathToMesh:
     def __init__(self, cfg):
-        self.extrusion_width = cfg.extrusion_width * cfg.VERTEX_PRECISION
-        self.layer_height = cfg.layer_height * cfg.VERTEX_PRECISION
+        self.vertex_precision = cfg.VERTEX_PRECISION
+        self.extrusion_width = cfg.extrusion_width
+        self.first_layer_height = cfg.first_layer_height
+        self.layer_height = cfg.layer_height
 
-    def create_mesh(self, vertices, vertex_normals, indices, path, z_height):
+    def create_mesh(self, vertices, vertex_normals, indices, path, layer_no):
         path_length = len(path)
+        z_height = self.first_layer_height + layer_no * self.layer_height
+        layer_height = self.first_layer_height if layer_no == 0 else self.layer_height
 
-        normals = self._create_normals_from_path(path)
+        # Slicer worked with integers, needs to be reverted
+        path_ = numpy.divide(path, self.vertex_precision)
+
+        normals = self._create_normals_from_path(path_)
         # Add to every vertex a third column with value zero
         normals = numpy.append(normals, numpy.zeros((len(normals), 1), numpy.float32), axis=1)
 
         # Add to every vertex a third column with the layer height
-        path = numpy.append(path, numpy.full((path_length, 1), z_height, numpy.float32), axis=1)
+        path_ = numpy.append(path_, numpy.full((path_length, 1), z_height, numpy.float32), axis=1)
 
         self._create_line_meshes(vertices[:path_length * VERTICES_PER_LINE],
                                  vertex_normals[:path_length * VERTICES_PER_LINE],
                                  indices[:path_length * INDEX_ARRAYS_PER_LINE],
-                                 path,
+                                 path_,
                                  normals,
-                                 z_height)
+                                 layer_height)
 
         self._create_corner_triangles(vertices[path_length * VERTICES_PER_LINE:],
                                       vertex_normals[path_length * VERTICES_PER_LINE:],
                                       indices[path_length * INDEX_ARRAYS_PER_LINE:],
-                                      path,
-                                      normals)
+                                      path_,
+                                      normals,
+                                      layer_height)
 
-    def _create_line_meshes(self, vertices, vertex_normals, indices, path, normals, z_height):
+    def _create_line_meshes(self, vertices, vertex_normals, indices, path, normals, layer_height):
         path_length = len(path)
 
         normals2x = numpy.repeat(normals, 2, 0)
@@ -249,22 +257,22 @@ class PathToMesh:
         # .\
         # ..
         vertices[:path_length * 4:2] = center_path
-        vertices[1:path_length * 4:2] = outer_path - [0.0, 0.0, self.layer_height / 2]
+        vertices[1:path_length * 4:2] = outer_path - [0.0, 0.0, layer_height / 2]
 
         # /.
         # ..
-        vertices[path_length * 4:2 * path_length * 4:2] = inner_path - [0.0, 0.0, self.layer_height / 2]
+        vertices[path_length * 4:2 * path_length * 4:2] = inner_path - [0.0, 0.0, layer_height / 2]
         vertices[path_length * 4 + 1:2 * path_length * 4:2] = center_path
 
         # ..
         # ./
-        vertices[2 * path_length * 4:3 * path_length * 4:2] = outer_path - [0.0, 0.0, self.layer_height / 2]
-        vertices[2 * path_length * 4 + 1:3 * path_length * 4:2] = center_path - [0.0, 0.0, self.layer_height]
+        vertices[2 * path_length * 4:3 * path_length * 4:2] = outer_path - [0.0, 0.0, layer_height / 2]
+        vertices[2 * path_length * 4 + 1:3 * path_length * 4:2] = center_path - [0.0, 0.0, layer_height]
 
         # ..
         # \.
-        vertices[3 * path_length * 4:4 * path_length * 4:2] = center_path - [0.0, 0.0, self.layer_height]
-        vertices[3 * path_length * 4 + 1:4 * path_length * 4:2] = inner_path - [0.0, 0.0, self.layer_height / 2]
+        vertices[3 * path_length * 4:4 * path_length * 4:2] = center_path - [0.0, 0.0, layer_height]
+        vertices[3 * path_length * 4 + 1:4 * path_length * 4:2] = inner_path - [0.0, 0.0, layer_height / 2]
 
         vertex_normals_ = numpy.cross(vertices[1:path_length * VERTICES_PER_LINE:4] - vertices[:path_length * 16:4],
                                       vertices[2:path_length * VERTICES_PER_LINE:4] - vertices[:path_length * 16:4])
@@ -283,7 +291,7 @@ class PathToMesh:
 
         numpy.copyto(indices[:path_length * INDEX_ARRAYS_PER_LINE], indices_)
 
-    def _create_corner_triangles(self, vertices, vertex_normals, indices, path, normals):
+    def _create_corner_triangles(self, vertices, vertex_normals, indices, path, normals, layer_height):
         path_length = len(path)
 
         a = numpy.roll(path, -1, 0) - path
@@ -309,13 +317,13 @@ class PathToMesh:
 
         # upper triangle
         vertices_[:path_length * 3:3] = path
-        vertices_[1:path_length * 3:3] = e - [0.0, 0.0, self.layer_height / 2]
-        vertices_[2:path_length * 3:3] = f - [0.0, 0.0, self.layer_height / 2]
+        vertices_[1:path_length * 3:3] = e - [0.0, 0.0, layer_height / 2]
+        vertices_[2:path_length * 3:3] = f - [0.0, 0.0, layer_height / 2]
 
         # lower triangle
-        vertices_[path_length * 3:path_length * 6:3] = path - [0.0, 0.0, self.layer_height]
-        vertices_[path_length * 3 + 1:path_length * 6:3] = f - [0.0, 0.0, self.layer_height / 2]
-        vertices_[path_length * 3 + 2:path_length * 6:3] = e - [0.0, 0.0, self.layer_height / 2]
+        vertices_[path_length * 3:path_length * 6:3] = path - [0.0, 0.0, layer_height]
+        vertices_[path_length * 3 + 1:path_length * 6:3] = f - [0.0, 0.0, layer_height / 2]
+        vertices_[path_length * 3 + 2:path_length * 6:3] = e - [0.0, 0.0, layer_height / 2]
 
         numpy.copyto(vertices, vertices_)
 
