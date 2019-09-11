@@ -154,19 +154,23 @@ class LayerMesh:
 
         node_count = 0
         for layer_no, layer in enumerate(self.sliced_model.layers):
-            for perimeter in layer.perimeters:
-                for path in perimeter:
-                    path_length = len(path)
+            for layer_part in layer:
+                for perimeter in layer_part.perimeters:
+                    for path in perimeter:
+                        path_length = len(path)
 
-                    v = vertices[node_count * VERTICES_PER_NODE:(node_count + path_length) * VERTICES_PER_NODE]
-                    n = normals[node_count * NORMALS_PER_NODE:(node_count + path_length) * NORMALS_PER_NODE]
-                    i = indices[node_count * INDEX_ARRAYS_PER_NODE:(node_count + path_length) * INDEX_ARRAYS_PER_NODE]
+                        start = node_count
+                        end = node_count + path_length
 
-                    p2m.create_mesh(v, n, i, path, layer_no)
+                        v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
+                        n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
+                        i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
 
-                    i += node_count * VERTICES_PER_NODE
+                        p2m.create_mesh(v, n, i, path, layer_no)
 
-                    node_count += path_length
+                        i += node_count * VERTICES_PER_NODE
+
+                        node_count += path_length
 
             self.vertices_count_at_layer.append(node_count * INDEX_ARRAYS_PER_NODE * 6)
 
