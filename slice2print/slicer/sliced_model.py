@@ -24,24 +24,19 @@ class Layer:
         self.z = contour.z
         self.node_count = 0
 
-        for intersections in contour:
-            layer_part = []
-
-            for intersection in intersections:
-                layer_part.append((intersection.vertex.x, intersection.vertex.y))
-
-            self.layer_parts.append(layer_part)
-
-    def merge_intersecting_layer_parts(self):
+        # merge intersecting meshes
         pc = pyclipper.Pyclipper()
 
-        for layer_part in self.layer_parts:
-            if len(layer_part) > 1:
-                pc.AddPath(layer_part, pyclipper.PT_SUBJECT, True)
+        for intersections in contour:
+            path = []
 
-        solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+            for intersection in intersections:
+                path.append(intersection.xy)
 
-        self.layer_parts = solution
+            if len(path) > 1:
+                pc.AddPath(path, pyclipper.PT_SUBJECT, True)
+
+        self.layer_parts = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
     def create_perimeters(self):
         self._create_external_perimeters()
@@ -86,10 +81,6 @@ class SlicedModel:
 
         for contour in contours:
             self.layers.append(Layer(cfg, contour))
-
-    def merge_intersecting_meshes(self):
-        for layer in self.layers:
-            layer.merge_intersecting_layer_parts()
 
     def create_perimeters(self):
         for layer in self.layers:

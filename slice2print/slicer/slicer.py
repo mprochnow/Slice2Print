@@ -35,11 +35,6 @@ class Vertex:
         # We don't care about the flag here
         return self.x == other.x and self.y == other.y and self.z == other.z
 
-    def __iter__(self):
-        yield self.x
-        yield self.y
-        yield self.z
-
 
 class Edge:
     __slots__ = ["p", "q"]
@@ -93,6 +88,10 @@ class Intersection:
         self.forward_edge = forward_edge
         self.backward_edge = backward_edge
         self.layer = layer
+
+    @property
+    def xy(self):
+        return self.vertex.x, self.vertex.y
 
 
 class Triangle:
