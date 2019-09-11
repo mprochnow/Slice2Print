@@ -17,15 +17,20 @@ import pyclipper
 
 
 class Layer:
-    def __init__(self, cfg, z):
+    def __init__(self, cfg, contour):
         self.layer_parts = []
         self.perimeters = []
         self.cfg = cfg
-        self.z = z
+        self.z = contour.z
         self.node_count = 0
 
-    def add_layer_part(self, layer_part):
-        self.layer_parts.append(layer_part)
+        for intersections in contour:
+            layer_part = []
+
+            for intersection in intersections:
+                layer_part.append((intersection.vertex.x, intersection.vertex.y))
+
+            self.layer_parts.append(layer_part)
 
     def merge_intersecting_layer_parts(self):
         pc = pyclipper.Pyclipper()
@@ -80,17 +85,7 @@ class SlicedModel:
         self.node_count = 0
 
         for contour in contours:
-            layer = Layer(cfg, contour.z)
-
-            for intersections in contour:
-                layer_part = []
-
-                for intersection in intersections:
-                    layer_part.append((intersection.vertex.x, intersection.vertex.y))
-
-                layer.add_layer_part(layer_part)
-
-            self.layers.append(layer)
+            self.layers.append(Layer(cfg, contour))
 
     def merge_intersecting_meshes(self):
         for layer in self.layers:
