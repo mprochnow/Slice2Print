@@ -241,6 +241,9 @@ class Intersections:
     def __iter__(self):
         yield from self.intersections
 
+    def __len__(self):
+        return len(self.intersections)
+
 
 class Contour:
     """

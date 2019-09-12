@@ -65,12 +65,12 @@ class Layer:
         pc = pyclipper.Pyclipper()
 
         for intersections in contour:
-            path = []
+            if len(intersections) > 1:
+                path = []
 
-            for intersection in intersections:
-                path.append(intersection.xy)
+                for intersection in intersections:
+                    path.append(intersection.xy)
 
-            if len(path) > 1:
                 pc.AddPath(path, pyclipper.PT_SUBJECT, True)
 
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
