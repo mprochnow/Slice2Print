@@ -129,14 +129,14 @@ class OptionsPanel(wx.Panel):
         sizer = wx.FlexGridSizer(0, 3, 0, 0)
 
         # First layer height
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL| wx.TOP, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer height"), 0, wx.ALIGN_CENTER_VERTICAL, 7)
 
         self.ctrl_first_layer_height = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
         self.ctrl_first_layer_height.SetDigits(2)
         self.ctrl_first_layer_height.SetIncrement(0.1)
-        sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
+        sizer.Add(self.ctrl_first_layer_height, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 7)
 
         # Layer height
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer height"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
@@ -157,7 +157,7 @@ class OptionsPanel(wx.Panel):
         sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         # Top and bottom layers
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Top layers"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Top layers"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
         self.ctrl_top_layers = wx.SpinCtrl(self, wx.ID_ANY, min=0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
         sizer.Add(self.ctrl_top_layers, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
@@ -200,12 +200,16 @@ class OptionsPanel(wx.Panel):
 
         self.ctrl_first_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
         self.ctrl_layer_height.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
-        self.ctrl_first_layer_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
-        self.ctrl_print_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
-        self.ctrl_travel_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_perimeters.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_top_layers.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_bottom_layers.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_first_layer_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_print_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_travel_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+
+        self.ctrl_first_layer_speed.Disable()
+        self.ctrl_print_speed.Disable()
+        self.ctrl_travel_speed.Disable()
 
         self.controller.init_options(self)
 
