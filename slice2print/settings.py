@@ -28,7 +28,9 @@ DEFAULT_SETTINGS = {
         "first_layer_speed": 35,
         "print_speed": 50,
         "travel_speed": 150,  # This value does not really change once set, so is it maybe a printer setting?
-        "perimeters": 2
+        "perimeters": 2,
+        "top_layers": 4,
+        "bottom_layers": 4
     }
 }
 
@@ -91,6 +93,8 @@ class Settings:
         cfg.print_speed = self.print_speed
         cfg.travel_speed = self.travel_speed
         cfg.perimeters = self.perimeters
+        cfg.top_layers = self.top_layers
+        cfg.bottom_layers = self.bottom_layers
 
         return cfg
 
@@ -210,3 +214,19 @@ class Settings:
     @perimeters.setter
     def perimeters(self, p):
         self.settings["print_options"]["perimeters"] = p
+
+    @property
+    def top_layers(self):
+        return self.settings["print_options"]["top_layers"]
+
+    @top_layers.setter
+    def top_layers(self, layers):
+        self.settings["print_options"]["top_layers"] = layers
+
+    @property
+    def bottom_layers(self):
+        return self.settings["print_options"]["bottom_layers"]
+
+    @bottom_layers.setter
+    def bottom_layers(self, layers):
+        self.settings["print_options"]["bottom_layers"] = layers

@@ -29,6 +29,8 @@ class SlicerConfig:
         self.travel_speed = None
 
         self.perimeters = None
+        self.top_layers = None
+        self.bottom_layers = None
 
     @property
     def extrusion_width(self):
