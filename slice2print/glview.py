@@ -41,6 +41,7 @@ class Camera:
         self.pos_x = 0.0
         self.pos_y = 0.0
 
+        self.max_camera_distance = float("inf")
         self.camera_distance = self.DEFAULT_CAMERA_DISTANCE
         self.yaw = self.DEFAULT_YAW
         self.pitch = self.DEFAULT_PITCH
@@ -52,8 +53,10 @@ class Camera:
         self.pos_y += y
 
     def zoom(self, z):
-        if self.camera_distance - z > 0:
-            self.camera_distance -= z
+        camera_distance = self.camera_distance - z
+
+        if 0.0 < camera_distance < self.max_camera_distance:
+            self.camera_distance = camera_distance
 
     def rotate_x(self, degrees):
         self.pitch += degrees
@@ -103,6 +106,9 @@ class Camera:
         r = numpy.linalg.norm(bb.diagonal()) / 2
 
         self.camera_distance = r / math.tan(math.radians(self.fov_y / 2))
+
+    def set_current_camera_distance_as_max(self):
+        self.max_camera_distance = self.camera_distance
 
 
 class GlCanvas(wx.glcanvas.GLCanvas):
@@ -203,6 +209,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
                 bb.update((-d[0]/2, -d[2]/2, -d[1]/2))
                 bb.update((d[0]/2, d[2]/2, d[1]/2))
                 self.camera.view_all(bb)
+                self.camera.set_current_camera_distance_as_max()
 
         self.draw()
 
