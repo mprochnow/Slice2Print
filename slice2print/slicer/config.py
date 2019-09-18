@@ -39,3 +39,11 @@ class SlicerConfig:
     @property
     def extrusion_width_external_perimeter(self):
         return self.nozzle_diameter * 1.05
+
+    @property
+    def infill_angle(self):
+        return 45
+
+    @property
+    def infill_overlap(self):
+        return 25 / 100

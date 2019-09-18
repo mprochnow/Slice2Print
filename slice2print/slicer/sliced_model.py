@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
+import math
 import pyclipper
 
 
@@ -55,6 +56,34 @@ class LayerPart:
 
             self.perimeters.append(solution)
 
+    def create_top_and_bottom_layers(self):
+        pc = pyclipper.Pyclipper()
+
+        for perimeter in self.perimeters:
+            try:
+                pc.AddPath(perimeter[-1], pyclipper.PT_CLIP, True)
+            except pyclipper.ClipperException as e:
+                print(e, perimeter[:-1])
+
+        bb = pc.GetBounds()
+
+        extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
+        infill_inc = int(math.ceil(abs(bb.top) / extrusion_width))
+
+        infill = []
+        for i in range(extrusion_width // 2, infill_inc * extrusion_width, infill_inc):
+            infill.append([[bb.left, i], [bb.right, i]])
+            infill.append([[bb.left, -i], [bb.right, -i]])
+
+        # TODO apply infill rotation
+
+        for path in infill:
+            pc.AddPath(path, pyclipper.PT_SUBJECT, False)
+
+        # This crashes in the Clipper library itself!
+        # solution = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+
+
 
 class Layer:
     def __init__(self, cfg, contour):
@@ -86,6 +115,10 @@ class Layer:
             layer_part.create_perimeters()
             self.node_count += layer_part.node_count
 
+    def create_top_and_bottom_layers(self):
+        for layer_part in self.layer_parts:
+            layer_part.create_top_and_bottom_layers()
+
     def __iter__(self):
         yield from self.layer_parts
 
@@ -104,6 +137,8 @@ class SlicedModel:
         for layer in self.layers:
             layer.create_perimeters()
             self.node_count += layer.node_count
+
+            # layer.create_top_and_bottom_layers()
 
     @property
     def layer_count(self):
