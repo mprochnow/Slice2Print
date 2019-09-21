@@ -22,6 +22,7 @@ class LayerPart:
         self.cfg = cfg
         self.outline = outline
         self.perimeters = []
+        self.infill = []
         self.node_count = 0
 
     def create_perimeters(self):
@@ -31,58 +32,62 @@ class LayerPart:
     def _create_external_perimeters(self):
         pco = pyclipper.PyclipperOffset()
         pco.AddPath(self.outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
         solution = pco.Execute(-self.cfg.extrusion_width_external_perimeter / 2 * self.cfg.VERTEX_PRECISION)
 
-        for path in solution:
-            self.node_count += len(path)
-
-        self.perimeters.append(solution)
-
-    def _create_internal_perimeters(self):
-        for i in range(1, self.cfg.perimeters):
-            pco = pyclipper.PyclipperOffset()
-
-            for path in self.perimeters[0]:
-                pco.AddPath(path, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-            # TODO Add a small overlap to fill the void area between two perimeters
-            offset = i * self.cfg.extrusion_width
-            offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
-
-            solution = pco.Execute(-offset * self.cfg.VERTEX_PRECISION)
-
+        if len(solution) > 0:
             for path in solution:
                 self.node_count += len(path)
 
             self.perimeters.append(solution)
 
-    def create_top_and_bottom_layers(self):
-        pc = pyclipper.Pyclipper()
+    def _create_internal_perimeters(self):
+        if len(self.perimeters) > 0:
+            for i in range(1, self.cfg.perimeters):
+                pco = pyclipper.PyclipperOffset()
 
-        for perimeter in self.perimeters:
-            try:
+                for path in self.perimeters[0]:
+                    pco.AddPath(path, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+                # TODO Add a small overlap to fill the void area between two perimeters
+                offset = i * self.cfg.extrusion_width
+                offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
+
+                solution = pco.Execute(-offset * self.cfg.VERTEX_PRECISION)
+
+                if len(solution) > 0:
+                    for path in solution:
+                        self.node_count += len(path)
+
+                    self.perimeters.append(solution)
+
+    def create_solid_infill(self):
+        if len(self.perimeters) > 0:
+            pc = pyclipper.Pyclipper()
+
+            for perimeter in self.perimeters:
                 pc.AddPath(perimeter[-1], pyclipper.PT_CLIP, True)
-            except pyclipper.ClipperException as e:
-                print(e, perimeter[:-1])
 
-        bb = pc.GetBounds()
+            bounds = pc.GetBounds()
 
-        extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
-        infill_inc = int(math.ceil(abs(bb.top) / extrusion_width))
+            extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
+            infill_inc = int(math.ceil(abs(bounds.top) / extrusion_width))
 
-        infill = []
-        for i in range(extrusion_width // 2, infill_inc * extrusion_width, infill_inc):
-            infill.append([[bb.left, i], [bb.right, i]])
-            infill.append([[bb.left, -i], [bb.right, -i]])
+            infill = []
+            for i in range(extrusion_width // 2, infill_inc * extrusion_width, infill_inc):
+                infill.append([[bounds.left, i], [bounds.right, i]])
+                infill.append([[bounds.left, -i], [bounds.right, -i]])
 
-        # TODO apply infill rotation
+            # TODO Apply infill rotation
 
-        for path in infill:
-            pc.AddPath(path, pyclipper.PT_SUBJECT, False)
+            pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
+            # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
+            solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+            assert solution.depth == 1, "PyClipper.Execute2() return solution with depth != 1"
 
-        # This crashes in the Clipper library itself!
-        # solution = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
-
+            for child in solution.Childs:
+                self.infill.append(child.Contour)
+                # TODO Increment node count
 
 
 class Layer:
@@ -115,9 +120,9 @@ class Layer:
             layer_part.create_perimeters()
             self.node_count += layer_part.node_count
 
-    def create_top_and_bottom_layers(self):
+    def create_solid_infill(self):
         for layer_part in self.layer_parts:
-            layer_part.create_top_and_bottom_layers()
+            layer_part.create_solid_infill()
 
     def __iter__(self):
         yield from self.layer_parts
@@ -138,7 +143,19 @@ class SlicedModel:
             layer.create_perimeters()
             self.node_count += layer.node_count
 
-            # layer.create_top_and_bottom_layers()
+    def create_top_and_bottom_layers(self):
+        bottom_layers = self.cfg.bottom_layers
+        top_layers = self.cfg.top_layers
+
+        if bottom_layers + top_layers >= len(self.layers):
+            bottom_layers = 1
+            top_layers = len(self.layers) - 1
+
+        for layer in self.layers[:bottom_layers]:
+            layer.create_solid_infill()
+
+        for layer in self.layers[-top_layers:]:
+            layer.create_solid_infill()
 
     @property
     def layer_count(self):

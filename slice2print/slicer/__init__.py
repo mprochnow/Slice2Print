@@ -19,9 +19,7 @@ class ModelSlicer:
         if not self.slicer.cancelled:
             self.sliced_model = SlicedModel(self.cfg, self.model.bounding_box, self.slicer.contours)
             self.sliced_model.create_perimeters()
-
-            # intermediate fix to close the progress dialog
-            self.update_func(0, "")
+            self.sliced_model.create_top_and_bottom_layers()
 
     def cancelled(self):
         return self.slicer.cancelled
