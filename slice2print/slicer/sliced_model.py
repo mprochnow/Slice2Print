@@ -30,10 +30,7 @@ class LayerPart:
         self._create_internal_perimeters()
 
     def _create_external_perimeters(self):
-        pco = pyclipper.PyclipperOffset()
-        pco.AddPath(self.outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        solution = pco.Execute(-self.cfg.extrusion_width_external_perimeter / 2 * self.cfg.VERTEX_PRECISION)
+        solution = self._offset_polygons([self.outline], -self.cfg.extrusion_width_external_perimeter / 2)
 
         if len(solution) > 0:
             for path in solution:
@@ -44,16 +41,11 @@ class LayerPart:
     def _create_internal_perimeters(self):
         if len(self.perimeters) > 0:
             for i in range(1, self.cfg.perimeters):
-                pco = pyclipper.PyclipperOffset()
-
-                for path in self.perimeters[0]:
-                    pco.AddPath(path, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
                 # TODO Add a small overlap to fill the void area between two perimeters
                 offset = i * self.cfg.extrusion_width
                 offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
 
-                solution = pco.Execute(-offset * self.cfg.VERTEX_PRECISION)
+                solution = self._offset_polygons(self.perimeters[0], -offset)
 
                 if len(solution) > 0:
                     for path in solution:
@@ -90,6 +82,14 @@ class LayerPart:
                 for child in solution.Childs:
                     self.infill.append(child.Contour)
                     # TODO Increment node count
+
+    def _offset_polygons(self, polygons, offset):
+        pco = pyclipper.PyclipperOffset()
+
+        for polygon in polygons:
+            pco.AddPath(polygon, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+        return pco.Execute(offset * self.cfg.VERTEX_PRECISION)
 
 
 class Layer:
