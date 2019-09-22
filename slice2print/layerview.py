@@ -158,6 +158,7 @@ class LayerMesh:
                 for perimeter_no, perimeter in enumerate(layer_part.perimeters):
                     for path in perimeter:
                         # Slicer worked with integers, needs to be reverted
+                        # Also, append first node of path to its end to close it
                         path_ = numpy.divide(path + [path[0]], self.sliced_model.cfg.VERTEX_PRECISION)
                         path_length = len(path_) - 1
 
@@ -289,12 +290,8 @@ class PathToMesh:
 
         numpy.copyto(vertex_normals[:path_length * 16], vertex_normals_)
 
-        indices_ = numpy.array([[0, 1, 2, 2, 1, 3],
-                                [0, 1, 2, 2, 1, 3],
-                                [0, 1, 2, 2, 1, 3],
-                                [0, 1, 2, 2, 1, 3]], numpy.uint32)
-
-        indices_ = numpy.repeat(indices_, path_length, 0)
+        indices_ = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
+        indices_ = numpy.repeat(indices_, path_length * INDEX_ARRAYS_PER_LINE, 0)
         indices_ += numpy.arange(0, path_length * 4 * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
 
         numpy.copyto(indices[:path_length * INDEX_ARRAYS_PER_LINE], indices_)
@@ -369,4 +366,4 @@ class PathToMesh:
     @staticmethod
     def _normalize_3d(a):
         b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
-        return numpy.divide(a, b, where=(b != 0))
+        return numpy.divide(a, b, out=numpy.zeros_like(a), where=(b != 0))
