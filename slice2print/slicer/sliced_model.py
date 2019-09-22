@@ -83,11 +83,13 @@ class LayerPart:
             pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
             # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
             solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
-            assert solution.depth == 1, "PyClipper.Execute2() return solution with depth != 1"
 
-            for child in solution.Childs:
-                self.infill.append(child.Contour)
-                # TODO Increment node count
+            if solution.depth > 0:
+                assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
+
+                for child in solution.Childs:
+                    self.infill.append(child.Contour)
+                    # TODO Increment node count
 
 
 class Layer:
