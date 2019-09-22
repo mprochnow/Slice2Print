@@ -6,7 +6,7 @@ Implements "An improved slicing algorithm with efficient contour
 construction using STL files" by Zhengyan Zhang and Sanjay Joshi.
 
 ## Requirements
-* Python 3.5+ (https://python.org)
+* Python 3.6+ (https://python.org)
 * python-opengl (http://pyopengl.sourceforge.net)
 * numpy 1.16+ (https://numpy.org)
 * wxpython 4.0+ (https://wxpython.org)
