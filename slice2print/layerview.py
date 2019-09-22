@@ -21,7 +21,7 @@ from glhelpers import GlBuffer, rotate_x, ShaderProgram
 import glmesh
 import glview
 
-# numpy.seterr(all="raise")
+numpy.seterr(all="raise")
 
 
 class LayerView(wx.Panel):
@@ -151,6 +151,7 @@ class LayerMesh:
         indices = numpy.zeros((self.sliced_model.node_count * INDEX_ARRAYS_PER_NODE, 6), numpy.uint32)
 
         p2m = PathToMesh(self.sliced_model.cfg)
+        l2m = LinesToMesh(self.sliced_model.cfg)
 
         node_count = 0
         for layer_no, layer in enumerate(self.sliced_model.layers):
@@ -174,6 +175,26 @@ class LayerMesh:
                         i += node_count * VERTICES_PER_NODE
 
                         node_count += path_length
+
+                if len(layer_part.infill):
+                    lines_length = 2 * len(layer_part.infill)
+
+                    start = node_count
+                    end = node_count + lines_length
+
+                    v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
+                    n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
+                    i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
+
+                    l2m.create_mesh(v,
+                                    n,
+                                    i,
+                                    numpy.divide(layer_part.infill, self.sliced_model.cfg.VERTEX_PRECISION),
+                                    layer_no)
+
+                    i += node_count * VERTICES_PER_NODE
+
+                    node_count += lines_length
 
             self.vertices_count_at_layer.append(node_count * INDEX_ARRAYS_PER_NODE * 6)
 
@@ -214,7 +235,6 @@ class LayerMesh:
 
 class PathToMesh:
     def __init__(self, cfg):
-        self.vertex_precision = cfg.VERTEX_PRECISION
         self.extrusion_width_external_perimeter = cfg.extrusion_width_external_perimeter
         self.extrusion_width = cfg.extrusion_width
         self.first_layer_height = cfg.first_layer_height
@@ -371,7 +391,99 @@ class PathToMesh:
         vectors = numpy.roll(path, -1, 0)[:-1] - path[:-1]
 
         # calculate normals of each vector
-        normals = numpy.empty(vectors.shape, numpy.float32)
+        normals = numpy.empty_like(vectors)
+        normals[:, 0], normals[:, 1] = -vectors[:, 1], vectors[:, 0]
+
+        return self._normalize_2d(normals)
+
+    @staticmethod
+    def _normalize_2d(a):
+        return a / numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2)[:, numpy.newaxis]
+
+    @staticmethod
+    def _normalize_3d(a):
+        b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
+        return numpy.divide(a, b, out=numpy.zeros_like(a), where=(b != 0))
+
+
+class LinesToMesh:
+    def __init__(self, cfg):
+        self.extrusion_width = cfg.extrusion_width
+        self.first_layer_height = cfg.first_layer_height
+        self.layer_height = cfg.layer_height
+
+    def create_mesh(self, vertices, vertex_normals, indices, lines, layer_no):
+        z_height = self.first_layer_height + layer_no * self.layer_height
+        layer_height = self.first_layer_height if layer_no == 0 else self.layer_height
+
+        lines_ = numpy.reshape(lines, (len(lines) * 2, 2))
+        lines_length = len(lines_)
+
+        normals = self._create_normals_from_lines(lines_)
+        # Add to every vertex a third column with value zero
+        normals = numpy.append(normals, numpy.zeros((len(normals), 1), numpy.float32), axis=1)
+
+        # Add to every vertex a third column with the layer height
+        lines_ = numpy.append(lines_, numpy.full((lines_length, 1), z_height, numpy.float32), axis=1)
+
+        self._create_line_meshes(vertices[:lines_length * VERTICES_PER_LINE],
+                                 vertex_normals[:lines_length * VERTICES_PER_LINE],
+                                 indices[:lines_length * INDEX_ARRAYS_PER_LINE],
+                                 lines_,
+                                 normals,
+                                 layer_height,
+                                 self.extrusion_width)
+
+    def _create_line_meshes(self, vertices, vertex_normals, indices, lines, normals, layer_height, extrusion_width):
+        lines_length = len(lines)
+
+        normals2x = numpy.repeat(normals, 2, 0)
+        offsets = -normals2x * extrusion_width / 2
+
+        center_path = lines
+
+        inner_path = center_path - offsets
+        outer_path = center_path + offsets
+
+        # .\
+        # ..
+        vertices[:lines_length * 2:2] = center_path
+        vertices[1:lines_length * 2:2] = outer_path - [0.0, 0.0, layer_height / 2]
+
+        # /.
+        # ..
+        vertices[lines_length * 2:2 * lines_length * 2:2] = inner_path - [0.0, 0.0, layer_height / 2]
+        vertices[lines_length * 2 + 1:2 * lines_length * 2:2] = center_path
+
+        # ..
+        # ./
+        vertices[2 * lines_length * 2:3 * lines_length * 2:2] = outer_path - [0.0, 0.0, layer_height / 2]
+        vertices[2 * lines_length * 2 + 1:3 * lines_length * 2:2] = center_path - [0.0, 0.0, layer_height]
+
+        # ..
+        # \.
+        vertices[3 * lines_length * 2:4 * lines_length * 2:2] = center_path - [0.0, 0.0, layer_height]
+        vertices[3 * lines_length * 2 + 1:4 * lines_length * 2:2] = inner_path - [0.0, 0.0, layer_height / 2]
+
+        vertex_normals_ = numpy.cross(vertices[1:lines_length * VERTICES_PER_LINE:4] - vertices[:lines_length * 16:4],
+                                      vertices[2:lines_length * VERTICES_PER_LINE:4] - vertices[:lines_length * 16:4])
+        vertex_normals_ = self._normalize_3d(vertex_normals_)
+        vertex_normals_ = numpy.repeat(vertex_normals_, 4, 0)
+
+        numpy.copyto(vertex_normals[:lines_length * 16], vertex_normals_)
+
+        indices_ = numpy.array([[0, 1, 2, 2, 1, 3]], numpy.uint32)
+        indices_ = numpy.repeat(indices_, lines_length * INDEX_ARRAYS_PER_LINE, 0)
+        indices_ += numpy.arange(0, lines_length * 4 * 4, 4, dtype=numpy.uint32)[:, numpy.newaxis]
+
+        numpy.copyto(indices[:lines_length * INDEX_ARRAYS_PER_LINE], indices_)
+
+    def _create_normals_from_lines(self, lines):
+        # calculate direction vectors
+        vectors = lines[1::2] - lines[::2]
+
+        # calculate normals of each vector
+        normals = numpy.empty_like(vectors)
         normals[:, 0], normals[:, 1] = -vectors[:, 1], vectors[:, 0]
 
         return self._normalize_2d(normals)

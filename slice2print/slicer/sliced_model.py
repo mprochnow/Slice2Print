@@ -66,7 +66,7 @@ class LayerPart:
             infill_inc = int(math.ceil(abs(bounds.top) / extrusion_width))
 
             infill = []
-            for i in range(extrusion_width // 2, infill_inc * extrusion_width, infill_inc):
+            for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
                 infill.append([[bounds.left, i], [bounds.right, i]])
                 infill.append([[bounds.left, -i], [bounds.right, -i]])
 
@@ -81,7 +81,7 @@ class LayerPart:
 
                 for child in solution.Childs:
                     self.infill.append(child.Contour)
-                    # TODO Increment node count
+                    self.node_count += 2
 
     def _offset_polygons(self, polygons, offset):
         pco = pyclipper.PyclipperOffset()
@@ -98,7 +98,6 @@ class Layer:
         self.perimeters = []
         self.cfg = cfg
         self.z = contour.z
-        self.node_count = 0
 
         # merge intersecting meshes
         pc = pyclipper.Pyclipper()
@@ -120,7 +119,6 @@ class Layer:
     def create_perimeters(self):
         for layer_part in self.layer_parts:
             layer_part.create_perimeters()
-            self.node_count += layer_part.node_count
 
     def create_solid_infill(self):
         for layer_part in self.layer_parts:
@@ -129,13 +127,19 @@ class Layer:
     def __iter__(self):
         yield from self.layer_parts
 
+    @property
+    def node_count(self):
+        result = 0
+        for layer_part in self.layer_parts:
+            result += layer_part.node_count
+        return result
+
 
 class SlicedModel:
     def __init__(self, cfg, bounding_box, contours):
         self.layers = []
         self.cfg = cfg
         self.bounding_box = bounding_box
-        self.node_count = 0
 
         for contour in contours:
             self.layers.append(Layer(cfg, contour))
@@ -143,7 +147,6 @@ class SlicedModel:
     def create_perimeters(self):
         for layer in self.layers:
             layer.create_perimeters()
-            self.node_count += layer.node_count
 
     def create_top_and_bottom_layers(self):
         bottom_layers = self.cfg.bottom_layers
@@ -153,12 +156,22 @@ class SlicedModel:
             bottom_layers = 1
             top_layers = len(self.layers) - 1
 
-        for layer in self.layers[:bottom_layers]:
-            layer.create_solid_infill()
+        if bottom_layers > 0:
+            for layer in self.layers[:bottom_layers]:
+                layer.create_solid_infill()
 
-        for layer in self.layers[-top_layers:]:
-            layer.create_solid_infill()
+        if top_layers > 0:
+            for layer in self.layers[-top_layers:]:
+                layer.create_solid_infill()
 
     @property
     def layer_count(self):
         return len(self.layers)
+
+    @property
+    def node_count(self):
+        result = 0
+        for layer in self.layers:
+            result += layer.node_count
+        return result
+
