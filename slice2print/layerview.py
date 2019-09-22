@@ -334,6 +334,23 @@ class PathToMesh:
         vertices_[path_length * 3 + 1:path_length * 6:3] = f - [0.0, 0.0, layer_height / 2]
         vertices_[path_length * 3 + 2:path_length * 6:3] = e - [0.0, 0.0, layer_height / 2]
 
+        # "end caps"
+        vertices_[0] = path[0]
+        vertices_[1] = path[0] - offsets[0] - [0.0, 0.0, layer_height / 2]
+        vertices_[2] = path[0] + offsets[0] - [0.0, 0.0, layer_height / 2]
+
+        vertices_[3] = path[0] - [0.0, 0.0, layer_height]
+        vertices_[4] = path[0] + offsets[0] - [0.0, 0.0, layer_height / 2]
+        vertices_[5] = path[0] - offsets[0] - [0.0, 0.0, layer_height / 2]
+
+        vertices_[-6] = path[-1]
+        vertices_[-5] = path[-1] + offsets[-1] - [0.0, 0.0, layer_height / 2]
+        vertices_[-4] = path[-1] - offsets[-1] - [0.0, 0.0, layer_height / 2]
+
+        vertices_[-3] = path[-1] - [0.0, 0.0, layer_height]
+        vertices_[-2] = path[-1] - offsets[-1] - [0.0, 0.0, layer_height / 2]
+        vertices_[-1] = path[-1] + offsets[-1] - [0.0, 0.0, layer_height / 2]
+
         numpy.copyto(vertices, vertices_)
 
         vertex_normals_ = numpy.cross(vertices_[1::3] - vertices_[::3], vertices_[2::3] - vertices_[::3])
