@@ -42,16 +42,17 @@ class Settings:
     def __init__(self):
         if sys.platform == "win32":
             # https://blogs.msdn.microsoft.com/patricka/2010/03/18/where-should-i-store-my-data-and-configuration-files-if-i-target-multiple-os-versions/
-            self.path_to_folder = os.path.expandvars("%%APPDATA%%\\%s\\" % self.APP_NAME)
+            self.path_to_folder = os.path.expandvars("%APPDATA%")
         elif sys.platform.startswith("linux"):
             # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
             if os.getenv("XDG_CONFIG_HOME") is not None:
-                self.path_to_folder = os.path.expandvars("$XDG_CONFIG_HOME/%s/" % self.APP_NAME)
+                self.path_to_folder = os.path.expandvars("$XDG_CONFIG_HOME")
             else:
                 self.path_to_folder = os.path.expanduser("~/.config/")
         else:
-            raise RuntimeError("Unsupported platform: %s" % sys.platform)
+            raise RuntimeError(f"Unsupported platform: {sys.platform}")
 
+        self.path_to_folder = os.path.join(self.path_to_folder, self.APP_NAME)
         self.path_to_file = os.path.join(self.path_to_folder, self.FILE_NAME)
         self.settings = copy.deepcopy(DEFAULT_SETTINGS)
 
