@@ -53,34 +53,6 @@ class LayerPart:
 
                     self.perimeters.append(solution)
 
-    def create_solid_infill(self):
-        if len(self.perimeters) > 0:
-            pc = pyclipper.Pyclipper()
-            pc.AddPaths(self.perimeters[-1], pyclipper.PT_CLIP, True)
-
-            bounds = pc.GetBounds()
-
-            extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
-            infill_inc = int(math.ceil(abs(bounds.top) / extrusion_width))
-
-            infill = []
-            for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
-                infill.append([[bounds.left, i], [bounds.right, i]])
-                infill.append([[bounds.left, -i], [bounds.right, -i]])
-
-            # TODO Apply infill rotation
-
-            pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
-            # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
-            solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-
-            if solution.depth > 0:
-                assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
-
-                for child in solution.Childs:
-                    self.infill.append(child.Contour)
-                    self.node_count += 2
-
     def _offset_polygons(self, polygons, offset):
         pco = pyclipper.PyclipperOffset()
 
@@ -94,6 +66,7 @@ class Layer:
     def __init__(self, cfg, contour):
         self.layer_parts = []
         self.perimeters = []
+        self.infill = []
         self.cfg = cfg
         self.z = contour.z
 
@@ -119,8 +92,33 @@ class Layer:
             layer_part.create_perimeters()
 
     def create_solid_infill(self):
+        pc = pyclipper.Pyclipper()
+
         for layer_part in self.layer_parts:
-            layer_part.create_solid_infill()
+            if len(layer_part.perimeters) > 0:
+                pc.AddPaths(layer_part.perimeters[-1], pyclipper.PT_CLIP, True)
+
+        bounds = pc.GetBounds()
+
+        extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
+        infill_inc = int(math.ceil(bounds.bottom / extrusion_width))
+
+        infill = []
+        for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
+            infill.append([[bounds.left, i], [bounds.right, i]])
+            infill.append([[bounds.left, -i], [bounds.right, -i]])
+
+        # TODO Apply infill rotation
+
+        pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
+        # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
+        solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+
+        if solution.depth > 0:
+            assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
+
+            for child in solution.Childs:
+                self.infill.append(child.Contour)
 
     def __iter__(self):
         yield from self.layer_parts
@@ -128,8 +126,11 @@ class Layer:
     @property
     def node_count(self):
         result = 0
+
         for layer_part in self.layer_parts:
             result += layer_part.node_count
+
+        result += len(self.infill) * 2
         return result
 
 

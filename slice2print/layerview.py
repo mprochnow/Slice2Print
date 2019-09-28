@@ -176,25 +176,25 @@ class LayerMesh:
 
                         node_count += path_length
 
-                if len(layer_part.infill):
-                    lines_length = 2 * len(layer_part.infill)
+            if len(layer.infill):
+                lines_length = 2 * len(layer.infill)
 
-                    start = node_count
-                    end = node_count + lines_length
+                start = node_count
+                end = node_count + lines_length
 
-                    v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
-                    n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
-                    i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
+                v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
+                n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
+                i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
 
-                    l2m.create_mesh(v,
-                                    n,
-                                    i,
-                                    numpy.divide(layer_part.infill, self.sliced_model.cfg.VERTEX_PRECISION),
-                                    layer_no)
+                l2m.create_mesh(v,
+                                n,
+                                i,
+                                numpy.divide(layer.infill, self.sliced_model.cfg.VERTEX_PRECISION),
+                                layer_no)
 
-                    i += node_count * VERTICES_PER_NODE
+                i += node_count * VERTICES_PER_NODE
 
-                    node_count += lines_length
+                node_count += lines_length
 
             self.vertices_count_at_layer.append(node_count * INDEX_ARRAYS_PER_NODE * 6)
 
