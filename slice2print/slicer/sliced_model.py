@@ -103,22 +103,25 @@ class Layer:
         extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
         infill_inc = int(math.ceil(bounds.bottom / extrusion_width))
 
-        infill = []
-        for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
-            infill.append([[bounds.left, i], [bounds.right, i]])
-            infill.append([[bounds.left, -i], [bounds.right, -i]])
+        if infill_inc > 0:
+            infill = []
+            for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
+                infill.append([[bounds.left, i], [bounds.right, i]])
+                infill.append([[bounds.left, -i], [bounds.right, -i]])
 
-        # TODO Apply infill rotation
+            print(infill_inc, infill)
 
-        pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
-        # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
-        solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+            # TODO Apply infill rotation
 
-        if solution.depth > 0:
-            assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
+            pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
+            # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
+            solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
 
-            for child in solution.Childs:
-                self.infill.append(child.Contour)
+            if solution.depth > 0:
+                assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
+
+                for child in solution.Childs:
+                    self.infill.append(child.Contour)
 
     def __iter__(self):
         yield from self.layer_parts
@@ -159,9 +162,9 @@ class SlicedModel:
             for layer in self.layers[:bottom_layers]:
                 layer.create_solid_infill()
 
-        if top_layers > 0:
-            for layer in self.layers[-top_layers:]:
-                layer.create_solid_infill()
+        # if top_layers > 0:
+        #     for layer in self.layers[-top_layers:]:
+        #         layer.create_solid_infill()
 
     @property
     def layer_count(self):
