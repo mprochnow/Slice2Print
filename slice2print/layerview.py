@@ -319,7 +319,7 @@ class PathToMesh:
     def _create_corner_triangles(self, vertices, vertex_normals, indices, path, normals, layer_height, extrusion_width):
         path_length = len(path) - 1
 
-        a = numpy.roll(path, -1, 0) - path
+        a = numpy.roll(path, -1, 0) - path  # create vectors from vertices
         b = numpy.roll(a, -1, 0)
 
         # determinant > 0: left turn; determinant < 0: right turn
@@ -334,11 +334,13 @@ class PathToMesh:
 
         offsets = -normals * extrusion_width / 2
 
+        # calculate offset positions left and right from path for triangle vertices
         c = path[:-1] + numpy.roll(offsets, 1, 0) * directions[:, None]
         d = path[:-1] + offsets * directions[:, None]
 
         directions_ = directions >= 0
 
+        # switch vertices depending on turn direction
         e = numpy.where(directions_[:, None], c, d)
         f = numpy.where(directions_[:, None], d, c)
 
@@ -355,21 +357,27 @@ class PathToMesh:
         vertices_[path_length * 3 + 2:path_length * 6:3] = e - [0.0, 0.0, layer_height / 2]
 
         # "end caps"
-        vertices_[0] = path[0]
-        vertices_[1] = path[0] - offsets[0] - [0.0, 0.0, layer_height / 2]
-        vertices_[2] = path[0] + offsets[0] - [0.0, 0.0, layer_height / 2]
+        # determine turn direction of last and first path segment
+        first = path[1] - path[0]
+        last = path[-1] - path[-2]
+        determinant = last[0] * first[1] - last[1] * first[0]
 
-        vertices_[3] = path[0] - [0.0, 0.0, layer_height]
-        vertices_[4] = path[0] + offsets[0] - [0.0, 0.0, layer_height / 2]
-        vertices_[5] = path[0] - offsets[0] - [0.0, 0.0, layer_height / 2]
+        if determinant >= 0:
+            vertices_[0] = path[0]
+            vertices_[1] = path[0] - [0.0, 0.0, layer_height]
+            vertices_[2] = path[0] + offsets[0] - [0.0, 0.0, layer_height / 2]
 
-        vertices_[-6] = path[-1]
-        vertices_[-5] = path[-1] + offsets[-1] - [0.0, 0.0, layer_height / 2]
-        vertices_[-4] = path[-1] - offsets[-1] - [0.0, 0.0, layer_height / 2]
+            vertices_[path_length * 3] = path[-1]
+            vertices_[path_length * 3 + 1] = path[-1] + offsets[-1] - [0.0, 0.0, layer_height / 2]
+            vertices_[path_length * 3 + 2] = path[-1] - [0.0, 0.0, layer_height]
+        else:
+            vertices_[0] = path[0]
+            vertices_[1] = path[0] - offsets[0] - [0.0, 0.0, layer_height / 2]
+            vertices_[2] = path[0] - [0.0, 0.0, layer_height]
 
-        vertices_[-3] = path[-1] - [0.0, 0.0, layer_height]
-        vertices_[-2] = path[-1] - offsets[-1] - [0.0, 0.0, layer_height / 2]
-        vertices_[-1] = path[-1] + offsets[-1] - [0.0, 0.0, layer_height / 2]
+            vertices_[path_length * 3] = path[-1]
+            vertices_[path_length * 3 + 1] = path[-1] - [0.0, 0.0, layer_height]
+            vertices_[path_length * 3 + 2] = path[-1] - offsets[-1] - [0.0, 0.0, layer_height / 2]
 
         numpy.copyto(vertices, vertices_)
 
