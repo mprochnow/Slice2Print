@@ -16,6 +16,8 @@
 from glhelpers import *
 
 
+MODEL_COLOR = (1.0, 0.5, 0.0, 1.0)
+
 BASIC_VERTEX_SHADER = """
     #version 130
 
@@ -67,10 +69,7 @@ MODEL_VERTEX_SHADER = """
         vec3 normal_eye = vec3(view_matrix * model_matrix * vec4(vertex_normal, 0.0)); 
         float light = dot(normalize(normal_eye), normalize(light_position));
 
-        color = vec4(model_color[0] * light,
-                     model_color[1] * light,
-                     model_color[2] * light,
-                     model_color[3]);
+        color = vec4(vec3(model_color) * light, model_color[3]);
     }
 """
 
@@ -83,7 +82,7 @@ class ModelMesh:
         self.program = ShaderProgram(MODEL_VERTEX_SHADER, BASIC_FRAGMENT_SHADER)
         self.bounding_box = model.bounding_box
 
-        self.model_color = numpy.array([1.0, 0.5, 0.0, 1.0], numpy.float32)
+        self.model_color = numpy.array(MODEL_COLOR, numpy.float32)
 
         self.model_matrix = numpy.identity(4, numpy.float32)
         self.model_matrix[3][0] = -(self.bounding_box.x_max+self.bounding_box.x_min) / 2

@@ -329,7 +329,8 @@ class Slicer:
         vertices = numpy.multiply(vertices, slicer_config.VERTEX_PRECISION)
         self.vertices = vertices.astype(numpy.int32)
 
-        self.indices = model.indices.reshape((-1, 3))  # Done to make iterating in chunks easier
+        # Reshape indices list to make iterating in chunks easier
+        self.indices = model.indices.reshape((-1, 3))
 
     def slice(self):
         triangle_no = 0

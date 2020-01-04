@@ -109,8 +109,6 @@ class Layer:
                 infill.append([[bounds.left, i], [bounds.right, i]])
                 infill.append([[bounds.left, -i], [bounds.right, -i]])
 
-            print(infill_inc, infill)
-
             # TODO Apply infill rotation
 
             pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
