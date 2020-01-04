@@ -24,6 +24,7 @@ class LayerPart:
         self.perimeters = []
         self.infill = []
         self.node_count = 0
+        self.is_hole = not pyclipper.Orientation(outline)
 
     def create_perimeters(self):
         self._create_external_perimeters()
@@ -70,7 +71,9 @@ class Layer:
         self.cfg = cfg
         self.z = contour.z
 
-        # merge intersecting meshes
+        self._merge_intersecting_meshes(contour)
+
+    def _merge_intersecting_meshes(self, contour):
         pc = pyclipper.Pyclipper()
 
         for intersections in contour:
@@ -85,7 +88,7 @@ class Layer:
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
         for outline in solution:
-            self.layer_parts.append(LayerPart(cfg, outline))
+            self.layer_parts.append(LayerPart(self.cfg, outline))
 
     def create_perimeters(self):
         for layer_part in self.layer_parts:
@@ -94,9 +97,11 @@ class Layer:
     def create_solid_infill(self):
         pc = pyclipper.Pyclipper()
 
+        # Add the innermost perimeter of each layer part to Clipper instance
         for layer_part in self.layer_parts:
             if len(layer_part.perimeters) > 0:
-                pc.AddPaths(layer_part.perimeters[-1], pyclipper.PT_CLIP, True)
+                i = 0 if layer_part.is_hole else -1
+                pc.AddPaths(layer_part.perimeters[i], pyclipper.PT_CLIP, True)
 
         bounds = pc.GetBounds()
 
