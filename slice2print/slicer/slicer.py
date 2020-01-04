@@ -21,6 +21,8 @@ import math
 
 import numpy
 
+from .sliced_model import SlicedModel
+
 
 class Vertex:
     __slots__ = ["x", "y", "z", "flag"]
@@ -56,7 +58,7 @@ class Edge:
         # Vector form of the equation of a line
         #     X = P + s * U with U = Q - P
         #
-        # Parametric from of the equation of a line
+        # Parametric form of the equation of a line
         #     x1 = p1 + s * u1 with u1 = q1 - p1
         #     x2 = p2 + s * u2 with u2 = q2 - p2
         #     x3 = p3 + s * u3 with u3 = q3 - p3
@@ -306,6 +308,7 @@ class Slicer:
         :param update_func: Function to call to indicate progress
         """
         self.cancelled = False
+        self.slicer_config = slicer_config
         self.model = model
         self.update_func = update_func
         self.first_layer_height = int(slicer_config.first_layer_height * slicer_config.VERTEX_PRECISION)
@@ -333,6 +336,9 @@ class Slicer:
         self.indices = model.indices.reshape((-1, 3))
 
     def slice(self):
+        """
+        :return: Instance of SlicedModel if not cancelled else None
+        """
         triangle_no = 0
         for i, j, k in self.indices:
             triangle_no += 1
@@ -349,4 +355,6 @@ class Slicer:
 
                     self.cancelled = self.update_func(int(triangle_no / self.model.facet_count * 100), msg)
                     if self.cancelled:
-                        break
+                        return None
+
+        return SlicedModel(self.slicer_config, self.model.bounding_box, self.contours)

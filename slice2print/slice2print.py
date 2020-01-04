@@ -65,7 +65,7 @@ class MainFrameController:
 
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
-                self.frame.layer_view.set_sliced_model(dlg.slicer.sliced_model)
+                self.frame.layer_view.set_sliced_model(dlg.get_sliced_model())
 
     def settings_dialog(self):
         with dialog.SettingsDialog(self.frame) as dlg:

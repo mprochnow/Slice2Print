@@ -22,9 +22,8 @@ class SlicerDialog(wx.Dialog):
     def __init__(self, parent, model, slicer_config):
         wx.Dialog.__init__(self, parent, -1, "Slicing...", style=wx.CAPTION)
 
-        self.slicer = None
-        self.thread = None
         self.cancel = False
+        self.sliced_model = None
         self.model = model
         self.slicer_config = slicer_config
 
@@ -56,14 +55,20 @@ class SlicerDialog(wx.Dialog):
         self.cancel = True
 
     def on_show(self, event):
-        if event.IsShown() and self.slicer is None:
+        if event.IsShown():
             wx.CallAfter(self.slice)
 
     def slice(self):
-            self.slicer = slicer.ModelSlicer(self.slicer_config, self.model, self.update)
-            self.slicer.execute()
+        s = slicer.Slicer(self.slicer_config, self.model, self.update)
+        self.sliced_model = s.slice()
 
-            self.EndModal(wx.ID_CANCEL if self.cancel else wx.ID_OK)
+        if self.sliced_model:
+            self.sliced_model.create_perimeters()
+            self.sliced_model.create_top_and_bottom_layers()
+
+            self.EndModal(wx.ID_OK)
+        else:
+            self.EndModal(wx.ID_CANCEL)
 
     def update(self, progress, msg):
         self.gauge.SetValue(progress)
@@ -74,4 +79,4 @@ class SlicerDialog(wx.Dialog):
         return self.cancel
 
     def get_sliced_model(self):
-        return self.slicer.get_sliced_model_outlines()
+        return self.sliced_model
