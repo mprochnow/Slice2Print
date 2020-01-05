@@ -305,7 +305,7 @@ class PathToMesh:
 
         vertex_normals_ = numpy.cross(vertices[1:path_length * VERTICES_PER_LINE:4] - vertices[:path_length * 16:4],
                                       vertices[2:path_length * VERTICES_PER_LINE:4] - vertices[:path_length * 16:4])
-        vertex_normals_ = self._normalize_3d(vertex_normals_)
+        vertex_normals_ = normalize_3d(vertex_normals_)
         vertex_normals_ = numpy.repeat(vertex_normals_, 4, 0)
 
         numpy.copyto(vertex_normals[:path_length * 16], vertex_normals_)
@@ -382,7 +382,7 @@ class PathToMesh:
         numpy.copyto(vertices, vertices_)
 
         vertex_normals_ = numpy.cross(vertices_[1::3] - vertices_[::3], vertices_[2::3] - vertices_[::3])
-        vertex_normals_ = self._normalize_3d(vertex_normals_)
+        vertex_normals_ = normalize_3d(vertex_normals_)
         vertex_normals_ = numpy.repeat(vertex_normals_, 3, 0)
 
         numpy.copyto(vertex_normals, vertex_normals_)
@@ -402,16 +402,7 @@ class PathToMesh:
         normals = numpy.empty_like(vectors)
         normals[:, 0], normals[:, 1] = -vectors[:, 1], vectors[:, 0]
 
-        return self._normalize_2d(normals)
-
-    @staticmethod
-    def _normalize_2d(a):
-        return a / numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2)[:, numpy.newaxis]
-
-    @staticmethod
-    def _normalize_3d(a):
-        b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
-        return numpy.divide(a, b, out=numpy.zeros_like(a), where=(b != 0))
+        return normalize_2d(normals)
 
 
 class LinesToMesh:
@@ -475,7 +466,7 @@ class LinesToMesh:
 
         vertex_normals_ = numpy.cross(vertices[1:lines_length * VERTICES_PER_LINE:4] - vertices[:lines_length * 16:4],
                                       vertices[2:lines_length * VERTICES_PER_LINE:4] - vertices[:lines_length * 16:4])
-        vertex_normals_ = self._normalize_3d(vertex_normals_)
+        vertex_normals_ = normalize_3d(vertex_normals_)
         vertex_normals_ = numpy.repeat(vertex_normals_, 4, 0)
 
         numpy.copyto(vertex_normals[:lines_length * 16], vertex_normals_)
@@ -494,13 +485,23 @@ class LinesToMesh:
         normals = numpy.empty_like(vectors)
         normals[:, 0], normals[:, 1] = -vectors[:, 1], vectors[:, 0]
 
-        return self._normalize_2d(normals)
+        return normalize_2d(normals)
 
-    @staticmethod
-    def _normalize_2d(a):
-        return a / numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2)[:, numpy.newaxis]
 
-    @staticmethod
-    def _normalize_3d(a):
-        b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
-        return numpy.divide(a, b, out=numpy.zeros_like(a), where=(b != 0))
+def normalize_2d(a):
+    """
+    Normalizes each 2D vector in given array
+    :param a: numpy.array() of 2D vectors
+    :return: numpy.array() of 2D vectors
+    """
+    return a / numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2)[:, numpy.newaxis]
+
+
+def normalize_3d(a):
+    """
+    Normalizes each 3D vector in given array
+    :param a: numpy.array() of 3D vectors
+    :return: numpy.array() of 3D vectors
+    """
+    b = numpy.sqrt((a[:, 0] ** 2) + a[:, 1] ** 2 + a[:, 2] ** 2)[:, numpy.newaxis]
+    return numpy.divide(a, b, out=numpy.zeros_like(a), where=(b != 0))
