@@ -34,7 +34,7 @@ class LayerPart:
         offset = self.cfg.extrusion_width_external_perimeter / 2
         offset *= 1 if self.is_hole else -1
 
-        solution = self._offset_polygons([self.outline], offset)
+        solution = offset_polygons([self.outline], offset * self.cfg.VERTEX_PRECISION)
 
         if len(solution) > 0:
             for path in solution:
@@ -50,21 +50,13 @@ class LayerPart:
                 offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
                 offset *= 1 if self.is_hole else -1
 
-                solution = self._offset_polygons(self.perimeters[0], offset)
+                solution = offset_polygons(self.perimeters[0], offset * self.cfg.VERTEX_PRECISION)
 
                 if len(solution) > 0:
                     for path in solution:
                         self.node_count += len(path)
 
                     self.perimeters.append(solution)
-
-    def _offset_polygons(self, polygons, offset):
-        pco = pyclipper.PyclipperOffset()
-
-        for polygon in polygons:
-            pco.AddPath(polygon, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        return pco.Execute(offset * self.cfg.VERTEX_PRECISION)
 
 
 class Layer:
@@ -101,10 +93,20 @@ class Layer:
     def create_solid_infill(self):
         pc = pyclipper.Pyclipper()
 
-        # Add the innermost perimeter of each layer part to Clipper instance
+        # Boundaries for infill
+        # TODO Add a small overlap to fill the void area between two perimeters
+        # TODO Apply infill overlap
+        offset = self.cfg.extrusion_width_external_perimeter / 2
+        offset += (self.cfg.perimeters - 1) * self.cfg.extrusion_width
+        offset *= self.cfg.VERTEX_PRECISION
+
         for layer_part in self.layer_parts:
             assert len(layer_part.perimeters) > 0
-            pc.AddPaths(layer_part.perimeters[-1], pyclipper.PT_CLIP, True)
+
+            solution = offset_polygons(layer_part.perimeters[0], offset * (1 if layer_part.is_hole else -1))
+
+            if len(solution):
+                pc.AddPaths(solution, pyclipper.PT_CLIP, True)
 
         bounds = pc.GetBounds()
 
@@ -113,6 +115,7 @@ class Layer:
 
         if infill_inc > 0:
             infill = []
+            # TODO Take extrusion width of infill into account
             for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
                 infill.append([[bounds.left, i], [bounds.right, i]])
                 infill.append([[bounds.left, -i], [bounds.right, -i]])
@@ -183,3 +186,11 @@ class SlicedModel:
             result += layer.node_count
         return result
 
+
+def offset_polygons(polygons, offset):
+    pco = pyclipper.PyclipperOffset()
+
+    for polygon in polygons:
+        pco.AddPath(polygon, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+    return pco.Execute(offset)
