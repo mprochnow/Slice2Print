@@ -31,7 +31,10 @@ class LayerPart:
         self._create_internal_perimeters()
 
     def _create_external_perimeters(self):
-        solution = self._offset_polygons([self.outline], -self.cfg.extrusion_width_external_perimeter / 2)
+        offset = self.cfg.extrusion_width_external_perimeter / 2
+        offset *= 1 if self.is_hole else -1
+
+        solution = self._offset_polygons([self.outline], offset)
 
         if len(solution) > 0:
             for path in solution:
@@ -45,8 +48,9 @@ class LayerPart:
                 # TODO Add a small overlap to fill the void area between two perimeters
                 offset = i * self.cfg.extrusion_width
                 offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
+                offset *= 1 if self.is_hole else -1
 
-                solution = self._offset_polygons(self.perimeters[0], -offset)
+                solution = self._offset_polygons(self.perimeters[0], offset)
 
                 if len(solution) > 0:
                     for path in solution:
@@ -99,9 +103,8 @@ class Layer:
 
         # Add the innermost perimeter of each layer part to Clipper instance
         for layer_part in self.layer_parts:
-            if len(layer_part.perimeters) > 0:
-                i = 0 if layer_part.is_hole else -1
-                pc.AddPaths(layer_part.perimeters[i], pyclipper.PT_CLIP, True)
+            assert len(layer_part.perimeters) > 0
+            pc.AddPaths(layer_part.perimeters[-1], pyclipper.PT_CLIP, True)
 
         bounds = pc.GetBounds()
 
