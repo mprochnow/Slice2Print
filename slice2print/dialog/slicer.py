@@ -32,7 +32,7 @@ class SlicerDialog(wx.Dialog):
         self.staticText = wx.StaticText(self, -1, "")
         sizer.Add(self.staticText, 0, wx.EXPAND | wx.ALL, 7)
 
-        self.gauge = wx.Gauge(self, -1, 100)
+        self.gauge = wx.Gauge(self, -1, 120)
         self.gauge.SetValue(0)
         sizer.Add(self.gauge, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 7)
 
@@ -63,7 +63,10 @@ class SlicerDialog(wx.Dialog):
         self.sliced_model = s.slice()
 
         if self.sliced_model:
+            self.update(110, "Creating perimeters")
             self.sliced_model.create_perimeters()
+
+            self.update(120, "Creating top and bottom infill")
             self.sliced_model.create_top_and_bottom_layers()
 
             self.EndModal(wx.ID_OK)

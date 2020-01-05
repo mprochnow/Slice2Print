@@ -42,9 +42,10 @@ class MainFrameController:
                 try:
                     self.frame.notebook.SetSelection(0)
 
-                    self.model = model.Model.from_file(filename)
-                    self.frame.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
-                    self.frame.model_view.view_all()
+                    with wx.BusyInfo("Loading model...", self.frame):
+                        self.model = model.Model.from_file(filename)
+                        self.frame.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
+                        self.frame.model_view.view_all()
 
                     self.frame.status_bar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
