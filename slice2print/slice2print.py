@@ -110,6 +110,7 @@ class MainFrameController:
         options_panel.ctrl_perimeters.SetValue(self.settings.perimeters)
         options_panel.ctrl_top_layers.SetValue(self.settings.top_layers)
         options_panel.ctrl_bottom_layers.SetValue(self.settings.bottom_layers)
+        options_panel.ctrl_infill_overlap.SetValue(self.settings.infill_overlap)
 
     def update_options(self, options_panel):
         self.settings.first_layer_height = options_panel.ctrl_first_layer_height.GetValue()
@@ -120,6 +121,7 @@ class MainFrameController:
         self.settings.perimeters = options_panel.ctrl_perimeters.GetValue()
         self.settings.top_layers = options_panel.ctrl_top_layers.GetValue()
         self.settings.bottom_layers = options_panel.ctrl_bottom_layers.GetValue()
+        self.settings.infill_overlap = options_panel.ctrl_infill_overlap.GetValue()
 
 
 class OptionsPanel(wx.Panel):
@@ -157,20 +159,21 @@ class OptionsPanel(wx.Panel):
 
         sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
-        # Top and bottom layers
+        # Top and bottom layers, infill overlap
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "Top layers"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
-
         self.ctrl_top_layers = wx.SpinCtrl(self, wx.ID_ANY, min=0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
         sizer.Add(self.ctrl_top_layers, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
-
         sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Bottom layers"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
-
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Bottom layers"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
         self.ctrl_bottom_layers = wx.SpinCtrl(self, wx.ID_ANY, min=0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        sizer.Add(self.ctrl_bottom_layers, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+        sizer.Add(self.ctrl_bottom_layers, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
 
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, ""), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "Infill overlap"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.BOTTOM, 7)
+        self.ctrl_infill_overlap = wx.SpinCtrl(self, wx.ID_ANY, min=0, max=100, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
+        sizer.Add(self.ctrl_infill_overlap, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.TOP | wx.BOTTOM, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, "%"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 7)
 
         # First layer speed
         sizer.Add(wx.StaticText(self, wx.ID_ANY, "First layer speed"), 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP, 7)
@@ -204,7 +207,8 @@ class OptionsPanel(wx.Panel):
         self.ctrl_perimeters.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_top_layers.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_bottom_layers.Bind(wx.EVT_SPINCTRL, self.on_update)
-        self.ctrl_first_layer_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_bottom_layers.Bind(wx.EVT_SPINCTRL, self.on_update)
+        self.ctrl_infill_overlap.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_print_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
         self.ctrl_travel_speed.Bind(wx.EVT_SPINCTRL, self.on_update)
 

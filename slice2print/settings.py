@@ -27,10 +27,11 @@ DEFAULT_SETTINGS = {
         "layer_height": 0.2,
         "first_layer_speed": 35,
         "print_speed": 50,
-        "travel_speed": 150,  # This value does not really change once set, so is it maybe a printer setting?
+        "travel_speed": 150,
         "perimeters": 2,
         "top_layers": 4,
-        "bottom_layers": 4
+        "bottom_layers": 4,
+        "infill_overlap": 25
     }
 }
 
@@ -96,6 +97,7 @@ class Settings:
         cfg.perimeters = self.perimeters
         cfg.top_layers = self.top_layers
         cfg.bottom_layers = self.bottom_layers
+        cfg.infill_overlap = self.infill_overlap
 
         return cfg
 
@@ -231,3 +233,11 @@ class Settings:
     @bottom_layers.setter
     def bottom_layers(self, layers):
         self.settings["print_options"]["bottom_layers"] = layers
+
+    @property
+    def infill_overlap(self):
+        return self.settings["print_options"]["infill_overlap"]
+
+    @infill_overlap.setter
+    def infill_overlap(self, overlap):
+        self.settings["print_options"]["infill_overlap"] = overlap

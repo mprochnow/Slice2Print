@@ -29,8 +29,10 @@ class SlicerConfig:
         self.travel_speed = None
 
         self.perimeters = None
+
         self.top_layers = None
         self.bottom_layers = None
+        self.infill_overlap = None
 
     @property
     def extrusion_width(self):
@@ -44,6 +46,3 @@ class SlicerConfig:
     def infill_angle(self):
         return 45
 
-    @property
-    def infill_overlap(self):
-        return 25 / 100
