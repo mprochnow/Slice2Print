@@ -407,7 +407,7 @@ class PathToMesh:
 
 class LinesToMesh:
     def __init__(self, cfg):
-        self.extrusion_width = cfg.extrusion_width
+        self.extrusion_width = cfg.extrusion_width_infill
         self.first_layer_height = cfg.first_layer_height
         self.layer_height = cfg.layer_height
 

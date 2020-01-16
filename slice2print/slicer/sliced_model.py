@@ -110,12 +110,11 @@ class Layer:
 
         bounds = pc.GetBounds()
 
-        extrusion_width = int(self.cfg.extrusion_width * self.cfg.VERTEX_PRECISION)
+        extrusion_width = int(self.cfg.extrusion_width_infill * self.cfg.VERTEX_PRECISION)
         infill_inc = int(math.ceil(bounds.bottom / extrusion_width))
 
         if infill_inc > 0:
             infill = []
-            # TODO Take extrusion width of infill into account
             for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
                 infill.append([[bounds.left, i], [bounds.right, i]])
                 infill.append([[bounds.left, -i], [bounds.right, -i]])

@@ -43,6 +43,10 @@ class SlicerConfig:
         return self.nozzle_diameter * 1.05
 
     @property
+    def extrusion_width_infill(self):
+        return self.nozzle_diameter * 1.5
+
+    @property
     def infill_angle(self):
         return 45
 
