@@ -95,9 +95,9 @@ class Layer:
 
         # Boundaries for infill
         # TODO Add a small overlap to fill the void area between two perimeters
-        # TODO Apply infill overlap
         offset = self.cfg.extrusion_width_external_perimeter / 2
         offset += (self.cfg.perimeters - 1) * self.cfg.extrusion_width
+        offset -= self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
         offset *= self.cfg.VERTEX_PRECISION
 
         for layer_part in self.layer_parts:
@@ -107,6 +107,7 @@ class Layer:
 
             if len(solution):
                 pc.AddPaths(solution, pyclipper.PT_CLIP, True)
+            # TODO What to do if offset returned nothing?
 
         bounds = pc.GetBounds()
 
@@ -126,7 +127,7 @@ class Layer:
             solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
 
             if solution.depth > 0:
-                assert solution.depth == 1, f"PyClipper.Execute2() return solution with depth != 1 ({solution.depth})"
+                assert solution.depth == 1, f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
 
                 for child in solution.Childs:
                     self.infill.append(child.Contour)
