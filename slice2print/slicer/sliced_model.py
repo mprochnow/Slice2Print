@@ -31,26 +31,32 @@ class LayerPart:
         self._create_internal_perimeters()
 
     def _create_external_perimeters(self):
-        offset = self.cfg.extrusion_width_external_perimeter / 2
+        offset = self.cfg.extrusion_width_external_perimeter
         offset *= 1 if self.is_hole else -1
+        offset *= self.cfg.VERTEX_PRECISION
 
-        solution = offset_polygons([self.outline], offset * self.cfg.VERTEX_PRECISION)
+        solution = offset_perimeters([self.outline], offset, offset)
 
-        if len(solution) > 0:
+        if solution:
             for path in solution:
                 self.node_count += len(path)
 
             self.perimeters.append(solution)
 
     def _create_internal_perimeters(self):
-        if len(self.perimeters) > 0:
+        if self.perimeters:
+            extrusion_width = self.cfg.extrusion_width
+            extrusion_width *= self.cfg.VERTEX_PRECISION
+            extrusion_width *= 1 if self.is_hole else -1
+
             for i in range(1, self.cfg.perimeters):
                 # TODO Add a small overlap to fill the void area between two perimeters
-                offset = i * self.cfg.extrusion_width
-                offset -= (self.cfg.extrusion_width-self.cfg.extrusion_width_external_perimeter)/2
+                offset = self.cfg.extrusion_width_external_perimeter
+                offset += i * self.cfg.extrusion_width
+                offset *= self.cfg.VERTEX_PRECISION
                 offset *= 1 if self.is_hole else -1
 
-                solution = offset_polygons(self.perimeters[0], offset * self.cfg.VERTEX_PRECISION)
+                solution = offset_perimeters([self.outline], offset, extrusion_width)
 
                 if len(solution) > 0:
                     for path in solution:
@@ -95,17 +101,22 @@ class Layer:
 
         # Boundaries for infill
         # TODO Add a small overlap to fill the void area between two perimeters
-        offset = self.cfg.extrusion_width_external_perimeter / 2
+        offset = self.cfg.extrusion_width_external_perimeter
         offset += (self.cfg.perimeters - 1) * self.cfg.extrusion_width
         offset -= self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
         offset *= self.cfg.VERTEX_PRECISION
 
+        extrusion_width = self.cfg.extrusion_width
+        extrusion_width *= self.cfg.VERTEX_PRECISION
+
         for layer_part in self.layer_parts:
             assert len(layer_part.perimeters) > 0
 
-            solution = offset_polygons(layer_part.perimeters[0], offset * (1 if layer_part.is_hole else -1))
+            is_hole = 1 if layer_part.is_hole else -1
 
-            if len(solution):
+            solution = offset_perimeters([layer_part.outline], offset * is_hole, 0)
+
+            if solution:
                 pc.AddPaths(solution, pyclipper.PT_CLIP, True)
             # TODO What to do if offset returned nothing?
 
@@ -187,10 +198,32 @@ class SlicedModel:
         return result
 
 
-def offset_polygons(polygons, offset):
+def offset_perimeters(perimeters, offset, extrusion_width):
+    """
+    Offsets the given perimeters by applying first the given offset and than
+    offsetting the result reversely by half the extrusion with. This ensures
+    that the resulting perimeters will not overlap themselves in tight loops.
+
+    The resulting perimeters are located at the middle of their extrusion lines.
+
+    :param perimeters: List of perimeters, which themselves are lists of x-y-tuples
+    :param offset: Offset, can be a negative of positive value
+    :param extrusion_width: Extrusion width, can be a negative or positive value
+    :return: List of perimeters, which themselves are lists of x-y-tuples
+    """
     pco = pyclipper.PyclipperOffset()
 
-    for polygon in polygons:
-        pco.AddPath(polygon, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+    for perimeter in perimeters:
+        pco.AddPath(perimeter, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
 
-    return pco.Execute(offset)
+    intermediate = pco.Execute(offset)
+
+    if not extrusion_width:
+        return intermediate
+    else:
+        pco.Clear()
+
+        for perimeter in intermediate:
+            pco.AddPath(perimeter, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+        return pco.Execute(-extrusion_width / 2)
