@@ -133,7 +133,7 @@ class OptionsPanel(wx.Panel):
         self.SetSizer(sizer)
 
         self.ctrl_first_layer_height = self.add_spin_ctrl_double("First layer height", 0.0, 10.0, "mm")
-        self.ctrl_layer_height = self.add_spin_ctrl_double("Layer_height", 0.0, 10.0, "mm", True)
+        self.ctrl_layer_height = self.add_spin_ctrl_double("Layer height", 0.0, 10.0, "mm", True)
 
         self.ctrl_perimeters = self.add_spin_ctrl("Perimeters", 1, 100, "", True)
 
@@ -214,7 +214,7 @@ class OptionsPanel(wx.Panel):
         sizer.Add(ctrl, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
 
         # Label behind control
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, unit), 0, wx.ALIGN_CENTER_VERTICAL | margin, 7)
+        sizer.Add(wx.StaticText(self, wx.ID_ANY, unit), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
 
         ctrl.Bind(wx.EVT_SPINCTRL, self.on_update)
 
