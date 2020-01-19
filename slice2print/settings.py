@@ -31,7 +31,8 @@ DEFAULT_SETTINGS = {
         "perimeters": 2,
         "top_layers": 4,
         "bottom_layers": 4,
-        "infill_overlap": 25
+        "infill_overlap": 25,
+        "infill_angle": 45
     }
 }
 
@@ -98,6 +99,7 @@ class Settings:
         cfg.top_layers = self.top_layers
         cfg.bottom_layers = self.bottom_layers
         cfg.infill_overlap = self.infill_overlap
+        cfg.infill_angle = self.infill_angle
 
         return cfg
 
@@ -241,3 +243,11 @@ class Settings:
     @infill_overlap.setter
     def infill_overlap(self, overlap):
         self.settings["print_options"]["infill_overlap"] = overlap
+
+    @property
+    def infill_angle(self):
+        return self.settings["print_options"]["infill_angle"]
+
+    @infill_angle.setter
+    def infill_angle(self, angle):
+        self.settings["print_options"]["infill_angle"] = angle

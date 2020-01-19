@@ -33,6 +33,7 @@ class SlicerConfig:
         self.top_layers = None
         self.bottom_layers = None
         self.infill_overlap = None
+        self.infill_angle = None
 
     @property
     def extrusion_width(self):
@@ -45,8 +46,3 @@ class SlicerConfig:
     @property
     def extrusion_width_infill(self):
         return self.nozzle_diameter * 1.5
-
-    @property
-    def infill_angle(self):
-        return 45
-

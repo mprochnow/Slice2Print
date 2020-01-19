@@ -14,6 +14,7 @@
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
 import math
+import numpy as np
 import pyclipper
 
 
@@ -79,12 +80,13 @@ class LayerPart:
 
 
 class Layer:
-    def __init__(self, cfg, contour):
+    def __init__(self, cfg, contour, layer_no):
         self.layer_parts = []
         self.perimeters = []
         self.infill = []
         self.cfg = cfg
         self.z = contour.z
+        self.layer_no = layer_no
 
         self._merge_intersecting_meshes(contour)
 
@@ -125,19 +127,39 @@ class Layer:
 
         bounds = pc.GetBounds()
 
+        # Create infill lines
+        line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
+
+        # TODO Add a small overlap to fill the void area between two perimeters
         extrusion_width = int(self.cfg.extrusion_width_infill * self.cfg.VERTEX_PRECISION)
-        infill_inc = int(math.ceil(bounds.bottom / extrusion_width))
+        infill_inc = int(math.ceil(line_length / extrusion_width))
 
         if infill_inc > 0:
-            infill = []
-            for i in range(extrusion_width // 2, infill_inc * extrusion_width, extrusion_width):
-                infill.append([[bounds.left, i], [bounds.right, i]])
-                infill.append([[bounds.left, -i], [bounds.right, -i]])
+            infill = list()
+            infill.append([[0, -line_length], [0, line_length]])
 
-            # TODO Apply infill rotation
+            for i in range(extrusion_width//2, infill_inc*extrusion_width, extrusion_width):
+                x = i + extrusion_width/2
+                infill.append([[x, -line_length], [x, line_length]])
+                infill.append([[-x, -line_length], [-x, line_length]])
+
+            infill_angle = self.cfg.infill_angle
+            if self.layer_no % 2:
+                infill_angle += 90
+
+            infill_angle = np.radians(infill_angle)
+
+            c = np.cos(infill_angle)
+            s = np.sin(infill_angle)
+            rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
+
+            #  Apply infill rotation
+            infill = np.matmul(infill, rotation_matrix)
 
             pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
-            # Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here
+
+            # Clip infill lines
+            # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
             solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
 
             if solution.depth > 0:
@@ -166,8 +188,8 @@ class SlicedModel:
         self.cfg = cfg
         self.bounding_box = bounding_box
 
-        for contour in contours:
-            self.layers.append(Layer(cfg, contour))
+        for layer_no, contour in enumerate(contours):
+            self.layers.append(Layer(cfg, contour, layer_no))
 
     def create_perimeters(self):
         for layer in self.layers:

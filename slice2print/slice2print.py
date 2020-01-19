@@ -111,6 +111,7 @@ class MainFrameController:
         options_panel.ctrl_top_layers.SetValue(self.settings.top_layers)
         options_panel.ctrl_bottom_layers.SetValue(self.settings.bottom_layers)
         options_panel.ctrl_infill_overlap.SetValue(self.settings.infill_overlap)
+        options_panel.ctrl_infill_angle.SetValue(self.settings.infill_angle)
 
     def update_options(self, options_panel):
         self.settings.first_layer_height = options_panel.ctrl_first_layer_height.GetValue()
@@ -122,6 +123,7 @@ class MainFrameController:
         self.settings.top_layers = options_panel.ctrl_top_layers.GetValue()
         self.settings.bottom_layers = options_panel.ctrl_bottom_layers.GetValue()
         self.settings.infill_overlap = options_panel.ctrl_infill_overlap.GetValue()
+        self.settings.infill_angle = options_panel.ctrl_infill_angle.GetValue()
 
 
 class OptionsPanel(wx.Panel):
@@ -139,6 +141,7 @@ class OptionsPanel(wx.Panel):
 
         self.ctrl_top_layers = self.add_spin_ctrl("Top layers", 0, 100)
         self.ctrl_bottom_layers = self.add_spin_ctrl("Bottom layers", 0, 100)
+        self.ctrl_infill_angle = self.add_spin_ctrl("Infill angle", 0, 90, "°")
         self.ctrl_infill_overlap = self.add_spin_ctrl("Infill overlap", 0, 100, "%", True)
 
         self.ctrl_first_layer_speed = self.add_spin_ctrl("First layer speed", 1, 1000, "mm/sec")
