@@ -18,75 +18,15 @@ import numpy as np
 import pyclipper
 
 
-class LayerPart:
-    def __init__(self, cfg, outline):
-        self.cfg = cfg
-        self.outline = outline
-        self.perimeters = []
-        self.infill = []
-        self.node_count = 0
-        self.is_hole = not pyclipper.Orientation(outline)
-
-    def create_perimeters(self):
-        self._create_external_perimeters()
-        self._create_internal_perimeters()
-
-    def _create_external_perimeters(self):
-        solution = self.offset_outline(1, self.cfg.extrusion_width_external_perimeter/2)
-
-        if solution:
-            for path in solution:
-                self.node_count += len(path)
-
-            self.perimeters.append(solution)
-
-    def _create_internal_perimeters(self):
-        if self.perimeters:
-            for i in range(1, self.cfg.perimeters):
-                solution = self.offset_outline(i+1, self.cfg.extrusion_width/2)
-
-                if len(solution) > 0:
-                    for path in solution:
-                        self.node_count += len(path)
-
-                    self.perimeters.append(solution)
-
-    def offset_outline(self, nr_of_perimeters, inset):
-        """
-        Offsets the outline of this layer part by the given number of
-        perimeters and than subtract the result with the given inset. This
-        ensures that the resulting perimeters will not overlap themselves in
-        tight loops.
-
-        :param nr_of_perimeters: How many perimeters should be offset
-        :param inset: Value to subtract after offsetting
-        :return: List of perimeters, which themselves are lists of x-y-tuples
-        """
-        is_hole = 1 if self.is_hole else -1
-
-        # TODO Add a small overlap to fill the void area between two perimeters
-        offset = self.cfg.extrusion_width_external_perimeter
-        offset += (nr_of_perimeters - 1) * self.cfg.extrusion_width
-
-        pco = pyclipper.PyclipperOffset()
-        pco.AddPath(self.outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        solution = pco.Execute(offset * is_hole * self.cfg.VERTEX_PRECISION)
-
-        pco.Clear()
-        pco.AddPaths(solution, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        return pco.Execute(-inset * is_hole * self.cfg.VERTEX_PRECISION)
-
-
 class Layer:
     def __init__(self, cfg, contour, layer_no):
-        self.layer_parts = []
+        self.outlines = []
         self.perimeters = []
         self.infill = []
         self.cfg = cfg
         self.z = contour.z
         self.layer_no = layer_no
+        self.node_count = 0
 
         self._merge_intersecting_meshes(contour)
 
@@ -105,11 +45,36 @@ class Layer:
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
         for outline in solution:
-            self.layer_parts.append(LayerPart(self.cfg, outline))
+            self.outlines.append(outline)
 
     def create_perimeters(self):
-        for layer_part in self.layer_parts:
-            layer_part.create_perimeters()
+        self._create_external_perimeters()
+        self._create_internal_perimeters()
+
+    def _create_external_perimeters(self):
+        inset = self.cfg.extrusion_width_external_perimeter / 2
+
+        solution = self._offset_outline(1, inset)
+
+        if solution:
+            for path in solution:
+                self.node_count += len(path)
+
+            self.perimeters.append(solution)
+
+    def _create_internal_perimeters(self):
+        inset = self.cfg.extrusion_width / 2
+
+        for i in range(1, self.cfg.perimeters):
+            solution = self._offset_outline(i+1, inset)
+
+            if solution:
+                for path in solution:
+                    self.node_count += len(path)
+
+                self.perimeters.append(solution)
+            else:
+                break  # Nothing more to do here
 
     def create_solid_infill(self):
         pc = pyclipper.Pyclipper()
@@ -117,13 +82,9 @@ class Layer:
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
 
-        for layer_part in self.layer_parts:
-            assert layer_part.perimeters, "Layer part has not perimeters"
-
-            solution = layer_part.offset_outline(self.cfg.perimeters, inset)
-
-            if solution:
-                pc.AddPaths(solution, pyclipper.PT_CLIP, True)
+        solution = self._offset_outline(self.cfg.perimeters, inset)
+        assert solution, "No boundaries for infill"
+        pc.AddPaths(solution, pyclipper.PT_CLIP, True)
 
         bounds = pc.GetBounds()
 
@@ -168,18 +129,32 @@ class Layer:
                 for child in solution.Childs:
                     self.infill.append(child.Contour)
 
-    def __iter__(self):
-        yield from self.layer_parts
+        self.node_count += len(self.infill) * 2
 
-    @property
-    def node_count(self):
-        result = 0
+    def _offset_outline(self, nr_of_perimeters, inset):
+        """
+        Offsets the outline of this layer by the given number of perimeters
+        and than subtract the result with the given inset. This ensures that
+        the resulting perimeters will not overlap themselves in tight loops.
 
-        for layer_part in self.layer_parts:
-            result += layer_part.node_count
+        :param nr_of_perimeters: How many perimeters should be offset
+        :param inset: Value to subtract after offsetting
+        :return: Result of PyclipperOffset.Execute()
+        """
+        pco = pyclipper.PyclipperOffset()
 
-        result += len(self.infill) * 2
-        return result
+        offset = self.cfg.extrusion_width_external_perimeter
+        offset += (nr_of_perimeters -1) * self.cfg.extrusion_width
+
+        for outline in self.outlines:
+            pco.AddPath(outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+        solution = pco.Execute(-offset * self.cfg.VERTEX_PRECISION)
+
+        pco.Clear()
+        pco.AddPaths(solution, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+        return pco.Execute(inset * self.cfg.VERTEX_PRECISION)
 
 
 class SlicedModel:

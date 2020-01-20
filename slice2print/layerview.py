@@ -155,26 +155,26 @@ class LayerMesh:
 
         node_count = 0
         for layer_no, layer in enumerate(self.sliced_model.layers):
-            for layer_part in layer:
-                for perimeter_no, perimeter in enumerate(layer_part.perimeters):
-                    for path in perimeter:
-                        # Slicer worked with integers, needs to be reverted
-                        # Also, append first node of path to its end to close it
-                        path_ = numpy.divide(path + [path[0]], self.sliced_model.cfg.VERTEX_PRECISION)
-                        path_length = len(path_) - 1
+            for perimeter_no, perimeter in enumerate(layer.perimeters):
+                for path in perimeter:
+                    # Slicer worked with integers, needs to be reverted
+                    # Also, append first node of path to its end to close it
+                    # (assuming that a perimeter ist a closed loop, this might change in the future)
+                    path_ = numpy.divide(path + [path[0]], self.sliced_model.cfg.VERTEX_PRECISION)
+                    path_length = len(path_) - 1
 
-                        start = node_count
-                        end = node_count + path_length
+                    start = node_count
+                    end = node_count + path_length
 
-                        v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
-                        n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
-                        i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
+                    v = vertices[start * VERTICES_PER_NODE:end * VERTICES_PER_NODE]
+                    n = normals[start * NORMALS_PER_NODE:end * NORMALS_PER_NODE]
+                    i = indices[start * INDEX_ARRAYS_PER_NODE:end * INDEX_ARRAYS_PER_NODE]
 
-                        p2m.create_mesh(v, n, i, path_, perimeter_no == 0, layer_no)
+                    p2m.create_mesh(v, n, i, path_, perimeter_no == 0, layer_no)
 
-                        i += node_count * VERTICES_PER_NODE
+                    i += node_count * VERTICES_PER_NODE
 
-                        node_count += path_length
+                    node_count += path_length
 
             if len(layer.infill):
                 lines_length = 2 * len(layer.infill)
