@@ -48,6 +48,9 @@ class LayerView(wx.Panel):
         self.slider.Enable(False)
         self.gl_canvas.set_platform_mesh(glmesh.PlatformMesh(build_volume))
 
+    def set_dimensions(self, build_volume):
+        self.gl_canvas.set_dimensions(build_volume)
+
     def set_sliced_model(self, sliced_model):
         self.set_layer_count(sliced_model.layer_count)
 

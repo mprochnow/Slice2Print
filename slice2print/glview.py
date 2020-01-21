@@ -145,6 +145,14 @@ class GlCanvas(wx.glcanvas.GLCanvas):
     def set_platform_mesh(self, platform_mesh):
         self.platform_mesh = platform_mesh
 
+    def set_dimensions(self, build_volume):
+        # TODO Fix this mess
+        if self.platform_mesh:
+            if self.platform_mesh.initialized:
+                self.platform_mesh.set_dimensions(build_volume)
+            else:
+                self.platform_mesh.dimensions = build_volume
+
     def set_model_mesh(self, model_mesh):
         if self.model_mesh:
             self.model_mesh.delete()
