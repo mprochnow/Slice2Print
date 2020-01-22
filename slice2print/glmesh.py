@@ -224,7 +224,7 @@ class PlatformMesh:
         self.plane_indices = GlBuffer()
         self.outline_indices = GlBuffer()
 
-        self.set_dimensions(self.dimensions)
+        self._update_buffers()
 
         self.vao = glGenVertexArrays(1)
         glBindVertexArray(self.vao)
@@ -239,6 +239,12 @@ class PlatformMesh:
             self.line_program.model_color = self.line_color
             self.line_program.model_matrix = self.model_matrix
 
+    def set_dimensions(self, dimensions):
+        """
+        :param dimensions: Dimensions of build volume as tuple (x, y, z)
+        """
+        self.dimensions = dimensions
+
     def update_view_matrix(self, matrix):
         self.view_matrix = matrix
 
@@ -248,6 +254,8 @@ class PlatformMesh:
     def draw(self):
         if not self.initialized:
             self.init()
+
+        self._update_buffers()
 
         with self.triangle_program:
             self.triangle_program.view_matrix = self.view_matrix
@@ -273,13 +281,10 @@ class PlatformMesh:
             with self.outline_indices:
                 glDrawElements(GL_LINES, len(self.outline_indices), GL_UNSIGNED_INT, None)
 
-    def set_dimensions(self, dimensions):
-        """
-        :param dimensions: Dimensions of build volume as tuple (x, y, z)
-        """
-        x = dimensions[0]
-        y = dimensions[2]  # y is pointing upwards in OpenGL
-        z = dimensions[1]  # z is pointing "out of the screen" in OpenGL
+    def _update_buffers(self):
+        x = self.dimensions[0]
+        y = self.dimensions[2]  # y is pointing upwards in OpenGL
+        z = self.dimensions[1]  # z is pointing "out of the screen" in OpenGL
 
         vertices = numpy.array([[-x/2, 0, z/2],
                                 [x/2, 0, z/2],
