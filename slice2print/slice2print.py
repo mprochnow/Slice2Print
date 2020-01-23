@@ -14,18 +14,16 @@
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
 import ctypes
+import struct
 import sys
 
 import wx
 
 import dialog
-import glmesh
-import glview
 import icons
 import model
 import settings
-import layerview
-import struct
+import modelview
 
 
 class MainFrameController:
@@ -40,12 +38,10 @@ class MainFrameController:
             if dlg.ShowModal() != wx.ID_CANCEL:
                 filename = dlg.GetPath()
                 try:
-                    self.frame.model_view_notebook.SetSelection(0)
-
                     with wx.BusyInfo("Loading model...", self.frame):
                         self.model = model.Model.from_file(filename)
-                        self.frame.model_view.set_model_mesh(glmesh.ModelMesh(self.model))
-                        self.frame.model_view.view_all()
+                        self.frame.model_view.set_model(self.model)
+                        self.show_model_mesh()
 
                     self.frame.status_bar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
@@ -54,19 +50,23 @@ class MainFrameController:
                     d.ShowModal()
 
     def view_all(self):
-        page = self.frame.model_view_notebook.GetSelection()
-        if page == 0:
-            self.frame.model_view.view_all()
-        elif page == 1:
-            self.frame.layer_view.view_all()
+        self.frame.model_view.view_all()
 
     def slice_model(self):
-        self.frame.model_view_notebook.SetSelection(1)
         slicer_config = self.settings.get_slicer_config()
 
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
-                self.frame.layer_view.set_sliced_model(dlg.get_sliced_model())
+                self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
+                self.show_layer_mesh()
+
+    def show_model_mesh(self):
+        self.frame.GetToolBar().ToggleTool(self.frame.tool_model_view.GetId(), True)
+        self.frame.model_view.show_model_mesh()
+
+    def show_layer_mesh(self):
+        self.frame.GetToolBar().ToggleTool(self.frame.tool_layer_view.GetId(), True)
+        self.frame.model_view.show_layer_mesh()
 
     def frame_size_changed(self):
         if self.frame.IsMaximized():
@@ -267,6 +267,8 @@ class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
 
     def __init__(self):
+        self.tool_model_view = None
+        self.tool_layer_view = None
         self.settings = settings.Settings()
         self.settings.load_from_file()
         self.controller = MainFrameController(self, self.settings)
@@ -282,12 +284,7 @@ class MainFrame(wx.Frame):
         sizer.Add(panel, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-        self.model_view_notebook = wx.Notebook(panel)
-        self.model_view = glview.GlCanvas(self.model_view_notebook)
-        self.layer_view = layerview.LayerView(self.model_view_notebook, self.settings.build_volume)
-
-        self.model_view_notebook.AddPage(self.model_view, "3D Model")
-        self.model_view_notebook.AddPage(self.layer_view, "Sliced Model")
+        self.model_view = modelview.ModelView(panel, self.settings.build_volume)
 
         self.settings_notebook = wx.Notebook(panel)
         self.print_options_panel = PrintOptionsPanel(self.settings_notebook, self.controller)
@@ -297,8 +294,8 @@ class MainFrame(wx.Frame):
         self.settings_notebook.AddPage(self.printer_settings_panel, "Printer")
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.model_view_notebook, 1, wx.EXPAND | wx.LEFT | wx.BOTTOM, 7)
-        sizer.Add(self.settings_notebook, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 7)
+        sizer.Add(self.model_view, 1, wx.EXPAND)
+        sizer.Add(self.settings_notebook, 0, wx.EXPAND | wx.LEFT, 7)
         panel.SetSizer(sizer)
         self.Layout()
 
@@ -311,19 +308,24 @@ class MainFrame(wx.Frame):
 
         self.Maximize(self.settings.app_window_maximized)
 
-        self.model_view.set_platform_mesh(glmesh.PlatformMesh(self.settings.build_volume))
-
     def create_toolbar(self):
         toolbar = self.CreateToolBar()
-        tool_open = toolbar.AddTool(wx.ID_ANY, "", icons.folder24.GetBitmap(), shortHelp="Open")
+        tool_open = toolbar.AddTool(wx.ID_ANY, "Open model", icons.folder24.GetBitmap(), shortHelp="Open model")
         toolbar.AddSeparator()
-        tool_view_all = toolbar.AddTool(wx.ID_ANY, "", icons.maximize.GetBitmap(), shortHelp="View all")
-        tool_slice = toolbar.AddTool(wx.ID_ANY, "", icons.play24.GetBitmap(), shortHelp="Slice")
+        tool_slice = toolbar.AddTool(wx.ID_ANY, "Slice model", icons.play24.GetBitmap(), shortHelp="Slice model")
+        toolbar.AddSeparator()
+        self.tool_model_view = toolbar.AddRadioTool(wx.ID_ANY, "Model view", icons.box.GetBitmap(), shortHelp="Model view")
+        self.tool_layer_view = toolbar.AddRadioTool(
+            wx.ID_ANY, "Layer view", icons.alignjustify.GetBitmap(), shortHelp="Layer view")
+        toolbar.AddSeparator()
+        tool_view_all = toolbar.AddTool(wx.ID_ANY, "View all", icons.maximize.GetBitmap(), shortHelp="View all")
         toolbar.Realize()
 
         self.Bind(wx.EVT_TOOL, self.on_open, id=tool_open.GetId())
         self.Bind(wx.EVT_TOOL, self.on_view_all, id=tool_view_all.GetId())
         self.Bind(wx.EVT_TOOL, self.on_slice, id=tool_slice.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_model_view, id=self.tool_model_view.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_layer_view, id=self.tool_layer_view.GetId())
 
         return toolbar
 
@@ -338,6 +340,12 @@ class MainFrame(wx.Frame):
 
     def on_slice(self, event):
         self.controller.slice_model()
+
+    def on_model_view(self, event):
+        self.controller.show_model_mesh()
+
+    def on_layer_view(self, event):
+        self.controller.show_layer_mesh()
 
     def on_size(self, event):
         self.controller.frame_size_changed()

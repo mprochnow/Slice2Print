@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
-import enum
 import math
 
 from OpenGL.GL import *
@@ -128,6 +127,8 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         self.initialized = False
         self.platform_mesh = None
         self.model_mesh = None
+        self.layer_mesh = None
+        self.display_layer_mesh = False
         self.camera = Camera()
 
         self.mouse_x = 0
@@ -154,6 +155,19 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             self.model_mesh.delete()
         self.model_mesh = model_mesh
 
+    def set_layer_mesh(self, layer_mesh):
+        if self.layer_mesh:
+            self.layer_mesh.delete()
+        self.layer_mesh = layer_mesh
+
+    def show_model_mesh(self):
+        self.display_layer_mesh = False
+        self.Refresh()
+
+    def show_layer_mesh(self):
+        self.display_layer_mesh = True
+        self.Refresh()
+
     def view_all(self):
         if self.model_mesh:
             self.camera.view_all(self.model_mesh.bounding_box)
@@ -164,13 +178,23 @@ class GlCanvas(wx.glcanvas.GLCanvas):
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        if self.model_mesh:
+        if self.model_mesh and not self.display_layer_mesh:
             glPolygonOffset(1.0, 1.0)
             glEnable(GL_POLYGON_OFFSET_FILL)
 
             self.model_mesh.update_projection_matrix(self.camera.get_projection_matrix())
             self.model_mesh.update_view_matrix(self.camera.get_view_matrix())
             self.model_mesh.draw()
+
+            glDisable(GL_POLYGON_OFFSET_FILL)
+
+        if self.layer_mesh and self.display_layer_mesh:
+            glPolygonOffset(1.0, 1.0)
+            glEnable(GL_POLYGON_OFFSET_FILL)
+
+            self.layer_mesh.update_projection_matrix(self.camera.get_projection_matrix())
+            self.layer_mesh.update_view_matrix(self.camera.get_view_matrix())
+            self.layer_mesh.draw()
 
             glDisable(GL_POLYGON_OFFSET_FILL)
 

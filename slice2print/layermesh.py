@@ -15,70 +15,11 @@
 
 from OpenGL.GL import *
 import numpy.linalg
-import wx
 
 from glhelpers import GlBuffer, rotate_x, ShaderProgram
 import glmesh
-import glview
 
 numpy.seterr(all="raise")
-
-
-class LayerView(wx.Panel):
-    def __init__(self, parent, build_volume):
-        wx.Panel.__init__(self, parent)
-
-        self.gl_canvas = glview.GlCanvas(self)
-        self.slider = wx.Slider(self, wx.ID_ANY, 1, 1, 2, style=wx.SL_INVERSE | wx.SL_LEFT | wx.SL_VERTICAL)
-        self.layer_label = wx.StaticText(self, wx.ID_ANY, "1", style=wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL)
-
-        slider_sizer = wx.BoxSizer(wx.VERTICAL)
-        slider_sizer.Add(wx.StaticText(self, wx.ID_ANY, "Layer:"), 0, wx.ALIGN_CENTER_HORIZONTAL)
-        slider_sizer.Add(self.layer_label, 0, wx.ALIGN_CENTER_HORIZONTAL)
-        slider_sizer.Add(self.slider, 1, wx.ALIGN_CENTER_HORIZONTAL)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.gl_canvas, 1, wx.EXPAND)
-        sizer.Add(slider_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 7)
-        self.SetSizer(sizer)
-        self.Layout()
-
-        self.Bind(wx.EVT_SLIDER, self.on_slider, id=self.slider.GetId())
-
-        self.slider.Enable(False)
-        self.gl_canvas.set_platform_mesh(glmesh.PlatformMesh(build_volume))
-
-    def set_dimensions(self, build_volume):
-        self.gl_canvas.set_dimensions(build_volume)
-
-    def set_sliced_model(self, sliced_model):
-        self.set_layer_count(sliced_model.layer_count)
-
-        mesh = LayerMesh(sliced_model)
-
-        self.gl_canvas.set_model_mesh(mesh)
-        self.view_all()
-
-    def view_all(self):
-        self.gl_canvas.view_all()
-
-    def set_layer_count(self, layer_count):
-        self.slider.SetRange(1, layer_count)
-        self.slider.SetValue(layer_count)
-        self.slider.Enable(True)
-
-        self.layer_label.SetLabelText(str(layer_count))
-
-        self.Layout()
-
-    def on_slider(self, event):
-        layer = event.GetInt()
-
-        self.layer_label.SetLabelText(str(layer))
-        self.Layout()
-
-        self.gl_canvas.model_mesh.set_layers_to_draw(layer)
-        self.gl_canvas.Refresh()
 
 
 # 4 quads à 4 vertices
@@ -216,7 +157,8 @@ class LayerMesh:
         self.projection_matrix = matrix
 
     def set_layers_to_draw(self, layers_to_draw):
-        assert 1 <= layers_to_draw <= self.layer_count, "Value of parameter layers_to_draw not within range"
+        assert 1 <= layers_to_draw <= self.layer_count, \
+            f"Value of parameter layers_to_draw {layers_to_draw} not within range (1, {self.layer_count})"
         self.layers_to_draw = layers_to_draw
 
     def draw(self):
