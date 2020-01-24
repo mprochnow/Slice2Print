@@ -3,9 +3,11 @@
 #
 from wx.lib.embeddedimage import PyEmbeddedImage
 
-alignjustify = PyEmbeddedImage(
+plussquare24 = PyEmbeddedImage(
     b'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAAlw'
     b'SFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoA'
-    b'AAAuSURBVEiJY2AYBSMKHGZgYPhPJXwYZigT3Zw/LMBoHAw8GI2DgQejcTAKBikAAFn4Tdn6'
-    b'siyPAAAAAElFTkSuQmCC')
+    b'AACZSURBVEiJ7ZVtCoQgEIYfIupOW/fr41rtVbRj1I9GqGWI1THYlh4YBEfeV0dx4J+ogRHw'
+    b'wJIYHhiASjMYDcKf0WsGYeevtAIA0IiG05LB3cpBp8ggeEqswSSRxDclil7zcyXKbjBxfN+B'
+    b'/dzpnVx+gj3PJauUkevfFrP7/0WzjI1Br5XRa8mBfA2n0wxqMXEGYcfWzdSWeU9WH0NsB9xp'
+    b'Sf0AAAAASUVORK5CYII=')
 

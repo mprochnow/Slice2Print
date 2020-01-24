@@ -1,5 +1,7 @@
 Source of Icons: https://feathericons.com/ 
 
+box-sliced.svg/boxsliced24.png are derived from box.svg
+
 Icons are licensed under the MIT License
 
 ---

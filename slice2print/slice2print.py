@@ -310,13 +310,13 @@ class MainFrame(wx.Frame):
 
     def create_toolbar(self):
         toolbar = self.CreateToolBar()
-        tool_open = toolbar.AddTool(wx.ID_ANY, "Open model", icons.folder24.GetBitmap(), shortHelp="Open model")
+        tool_open = toolbar.AddTool(wx.ID_ANY, "Open model", icons.plussquare24.GetBitmap(), shortHelp="Open model")
         toolbar.AddSeparator()
         tool_slice = toolbar.AddTool(wx.ID_ANY, "Slice model", icons.play24.GetBitmap(), shortHelp="Slice model")
         toolbar.AddSeparator()
         self.tool_model_view = toolbar.AddRadioTool(wx.ID_ANY, "Model view", icons.box.GetBitmap(), shortHelp="Model view")
         self.tool_layer_view = toolbar.AddRadioTool(
-            wx.ID_ANY, "Layer view", icons.alignjustify.GetBitmap(), shortHelp="Layer view")
+            wx.ID_ANY, "Layer view", icons.boxsliced24.GetBitmap(), shortHelp="Layer view")
         toolbar.AddSeparator()
         tool_view_all = toolbar.AddTool(wx.ID_ANY, "View all", icons.maximize.GetBitmap(), shortHelp="View all")
         toolbar.Realize()
