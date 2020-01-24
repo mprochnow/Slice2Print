@@ -130,8 +130,7 @@ class MainFrameController:
         self.settings.nozzle_diameter = panel.ctrl_nozzle_diameter.GetValue()
         self.settings.filament_diameter = panel.ctrl_filament_diameter.GetValue()
 
-        self.frame.model_view.set_dimensions(build_volume)
-        self.frame.layer_view.set_dimensions(build_volume)
+        self.frame.model_view.set_build_volume(build_volume)
         self.frame.Refresh()
 
 

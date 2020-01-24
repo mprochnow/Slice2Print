@@ -59,7 +59,7 @@ class ModelView(wx.Panel):
         self.gl_canvas.Refresh()
 
     def set_build_volume(self, build_volume):
-        self.gl_canvas.model_mesh.set_dimensions(build_volume)
+        self.gl_canvas.set_dimensions(build_volume)
 
     def set_model(self, model):
         self.gl_canvas.set_model_mesh(glmesh.ModelMesh(model))
