@@ -38,9 +38,12 @@ class Layer:
                 path = []
 
                 for intersection in intersections:
-                    path.append(intersection.xy)
+                    # Ensure that each element in path is different
+                    if not path or path and path[-1] != intersection.xy:
+                        path.append(intersection.xy)
 
-                pc.AddPath(path, pyclipper.PT_SUBJECT, True)
+                if len(path) > 1:
+                    pc.AddPath(path, pyclipper.PT_SUBJECT, True)
 
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
