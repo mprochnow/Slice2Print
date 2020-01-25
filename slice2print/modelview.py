@@ -69,7 +69,6 @@ class ModelView(wx.Panel):
     def set_sliced_model(self, sliced_model):
         self.gl_canvas.set_layer_mesh(layermesh.LayerMesh(sliced_model))
         self.show_layer_mesh()
-        self.view_all()
 
         self.layer_slider.SetRange(1, sliced_model.layer_count)
         self.layer_slider.SetValue(sliced_model.layer_count)
@@ -79,6 +78,9 @@ class ModelView(wx.Panel):
 
     def view_all(self):
         self.gl_canvas.view_all()
+
+    def view_from_top(self):
+        self.gl_canvas.view_from_top()
 
     def show_model_mesh(self):
         self.layer_label.Disable()

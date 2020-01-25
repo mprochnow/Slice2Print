@@ -52,6 +52,9 @@ class MainFrameController:
     def view_all(self):
         self.frame.model_view.view_all()
 
+    def view_from_top(self):
+        self.frame.model_view.view_from_top()
+
     def slice_model(self):
         slicer_config = self.settings.get_slicer_config()
 
@@ -313,11 +316,14 @@ class MainFrame(wx.Frame):
         toolbar.AddSeparator()
         tool_slice = toolbar.AddTool(wx.ID_ANY, "Slice model", icons.play24.GetBitmap(), shortHelp="Slice model")
         toolbar.AddSeparator()
-        self.tool_model_view = toolbar.AddRadioTool(wx.ID_ANY, "Model view", icons.box.GetBitmap(), shortHelp="Model view")
+        self.tool_model_view = toolbar.AddRadioTool(
+            wx.ID_ANY, "Model view", icons.box.GetBitmap(), shortHelp="Model view")
         self.tool_layer_view = toolbar.AddRadioTool(
             wx.ID_ANY, "Layer view", icons.boxsliced24.GetBitmap(), shortHelp="Layer view")
         toolbar.AddSeparator()
         tool_view_all = toolbar.AddTool(wx.ID_ANY, "View all", icons.maximize.GetBitmap(), shortHelp="View all")
+        tool_view_from_top = toolbar.AddTool(
+            wx.ID_ANY, "View from top", icons.boxtop24.GetBitmap(), shortHelp="View from top")
         toolbar.Realize()
 
         self.Bind(wx.EVT_TOOL, self.on_open, id=tool_open.GetId())
@@ -325,6 +331,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_slice, id=tool_slice.GetId())
         self.Bind(wx.EVT_TOOL, self.on_model_view, id=self.tool_model_view.GetId())
         self.Bind(wx.EVT_TOOL, self.on_layer_view, id=self.tool_layer_view.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_view_from_top, id=tool_view_from_top.GetId())
 
         return toolbar
 
@@ -336,6 +343,9 @@ class MainFrame(wx.Frame):
 
     def on_view_all(self, event):
         self.controller.view_all()
+
+    def on_view_from_top(self, event):
+        self.controller.view_from_top()
 
     def on_slice(self, event):
         self.controller.slice_model()

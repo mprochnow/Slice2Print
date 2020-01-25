@@ -106,6 +106,10 @@ class Camera:
 
         self.camera_distance = r / math.tan(math.radians(self.fov_y / 2))
 
+    def view_from_top(self):
+        self.yaw = 0.0
+        self.pitch = 90.0
+
     def set_current_camera_distance_as_max(self):
         self.max_camera_distance = self.camera_distance
 
@@ -172,6 +176,10 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         if self.model_mesh:
             self.camera.view_all(self.model_mesh.bounding_box)
             self.Refresh()
+
+    def view_from_top(self):
+        self.camera.view_from_top()
+        self.Refresh()
 
     def draw(self):
         self.SetCurrent(self.context)
