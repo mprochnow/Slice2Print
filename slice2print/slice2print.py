@@ -32,8 +32,8 @@ class MainFrameController:
         self.settings = settings
         self.model = None
 
-    def open_model(self):
-        with wx.FileDialog(self.frame, "Open model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
+    def load_model(self, event=None):
+        with wx.FileDialog(self.frame, "Load model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
                            style=wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() != wx.ID_CANCEL:
                 filename = dlg.GetPath()
@@ -49,13 +49,13 @@ class MainFrameController:
                     d = wx.MessageDialog(self.frame, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
                     d.ShowModal()
 
-    def view_all(self):
+    def view_all(self, event=None):
         self.frame.model_view.view_all()
 
-    def view_from_top(self):
+    def view_from_top(self, event=None):
         self.frame.model_view.view_from_top()
 
-    def slice_model(self):
+    def slice_model(self, event=None):
         slicer_config = self.settings.get_slicer_config()
 
         with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
@@ -63,11 +63,11 @@ class MainFrameController:
                 self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
                 self.show_layer_mesh()
 
-    def show_model_mesh(self):
+    def show_model_mesh(self, event=None):
         self.frame.GetToolBar().ToggleTool(self.frame.tool_model_view.GetId(), True)
         self.frame.model_view.show_model_mesh()
 
-    def show_layer_mesh(self):
+    def show_layer_mesh(self, event=None):
         self.frame.GetToolBar().ToggleTool(self.frame.tool_layer_view.GetId(), True)
         self.frame.model_view.show_layer_mesh()
 
@@ -312,7 +312,7 @@ class MainFrame(wx.Frame):
 
     def create_toolbar(self):
         toolbar = self.CreateToolBar()
-        tool_open = toolbar.AddTool(wx.ID_ANY, "Open model", icons.plussquare24.GetBitmap(), shortHelp="Open model")
+        tool_open = toolbar.AddTool(wx.ID_ANY, "Load model", icons.plussquare24.GetBitmap(), shortHelp="Load model")
         toolbar.AddSeparator()
         tool_slice = toolbar.AddTool(wx.ID_ANY, "Slice model", icons.play24.GetBitmap(), shortHelp="Slice model")
         toolbar.AddSeparator()
@@ -326,35 +326,17 @@ class MainFrame(wx.Frame):
             wx.ID_ANY, "View from top", icons.boxtop24.GetBitmap(), shortHelp="View from top")
         toolbar.Realize()
 
-        self.Bind(wx.EVT_TOOL, self.on_open, id=tool_open.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_view_all, id=tool_view_all.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_slice, id=tool_slice.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_model_view, id=self.tool_model_view.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_layer_view, id=self.tool_layer_view.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_view_from_top, id=tool_view_from_top.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.load_model, id=tool_open.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.view_all, id=tool_view_all.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.slice_model, id=tool_slice.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.show_model_mesh, id=self.tool_model_view.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.show_layer_mesh, id=self.tool_layer_view.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.view_from_top, id=tool_view_from_top.GetId())
 
         return toolbar
 
     def on_exit(self, event):
         self.Close()
-
-    def on_open(self, event):
-        self.controller.open_model()
-
-    def on_view_all(self, event):
-        self.controller.view_all()
-
-    def on_view_from_top(self, event):
-        self.controller.view_from_top()
-
-    def on_slice(self, event):
-        self.controller.slice_model()
-
-    def on_model_view(self, event):
-        self.controller.show_model_mesh()
-
-    def on_layer_view(self, event):
-        self.controller.show_layer_mesh()
 
     def on_size(self, event):
         self.controller.frame_size_changed()
