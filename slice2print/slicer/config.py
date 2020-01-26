@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Slice2Print.  If not, see <http://www.gnu.org/licenses/>.
 
+import math
+
 
 class SlicerConfig:
     VERTEX_PRECISION = 1000.0
@@ -34,6 +36,11 @@ class SlicerConfig:
         self.bottom_layers = None
         self.infill_overlap = None
         self.infill_angle = None
+
+    @property
+    def extrusion_overlap_factor(self):
+        # https://manual.slic3r.org/advanced/flow-math
+        return 1 - math.pi/4
 
     @property
     def extrusion_width(self):

@@ -26,6 +26,7 @@ class Layer:
         self.cfg = cfg
         self.z = contour.z
         self.layer_no = layer_no
+        self.layer_height = (cfg.layer_height if layer_no > 0 else cfg.first_layer_height)
         self.node_count = 0
 
         self._merge_intersecting_meshes(contour)
@@ -94,8 +95,8 @@ class Layer:
         # Create infill lines
         line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
 
-        # TODO Add a small overlap to fill the void area between two perimeters
-        extrusion_width = int(self.cfg.extrusion_width_infill * self.cfg.VERTEX_PRECISION)
+        extrusion_width = int(
+            (self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) * self.cfg.VERTEX_PRECISION)
         infill_inc = int(math.ceil(line_length / extrusion_width))
 
         if infill_inc > 0:
@@ -147,7 +148,8 @@ class Layer:
         pco = pyclipper.PyclipperOffset()
 
         offset = self.cfg.extrusion_width_external_perimeter
-        offset += (nr_of_perimeters -1) * self.cfg.extrusion_width
+        offset += (nr_of_perimeters - 1) * self.cfg.extrusion_width
+        offset -= (nr_of_perimeters - 1) * self.layer_height * self.cfg.extrusion_overlap_factor
 
         for outline in self.outlines:
             pco.AddPath(outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
