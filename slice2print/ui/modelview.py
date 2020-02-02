@@ -15,9 +15,7 @@
 
 import wx
 
-import glview
-import glmesh
-import layermesh
+from ui import layermesh, glmesh, glview
 
 
 class ModelView(wx.Panel):

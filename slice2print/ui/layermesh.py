@@ -16,8 +16,8 @@
 from OpenGL.GL import *
 import numpy.linalg
 
-from glhelpers import GlBuffer, rotate_x, ShaderProgram
-import glmesh
+from ui.glhelpers import GlBuffer, rotate_x, ShaderProgram
+from ui import glmesh
 
 numpy.seterr(all="raise")
 

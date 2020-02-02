@@ -1,1 +1,0 @@
-from .slicer import SlicerDialog

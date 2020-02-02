@@ -19,18 +19,26 @@ import sys
 
 import wx
 
-import dialog
-import icons
 import model
 import settings
-import modelview
+
+import ui
 
 
 class MainFrameController:
-    def __init__(self, frame, settings):
-        self.frame = frame
-        self.settings = settings
+    def __init__(self):
         self.model = None
+        self.settings = settings.Settings()
+        self.settings.load_from_file()
+
+        self.app = wx.App()
+        self.frame = ui.MainFrame(self, self.settings)
+        self.toolbar = ui.MainFrameToolBar(self.frame, self)
+        self.frame.SetToolBar(self.toolbar)
+
+    def main(self):
+        self.frame.Show()
+        self.app.MainLoop()
 
     def load_model(self, event=None):
         with wx.FileDialog(self.frame, "Load model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
@@ -43,7 +51,7 @@ class MainFrameController:
                         self.frame.model_view.set_model(self.model)
                         self.show_model_mesh()
 
-                    self.frame.toolbar.enable_model_tools()
+                    self.toolbar.enable_model_tools()
                     self.frame.status_bar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
                 except (AssertionError, IOError, ValueError, struct.error) as e:
@@ -60,18 +68,18 @@ class MainFrameController:
         if self.model:
             slicer_config = self.settings.get_slicer_config()
 
-            with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
+            with ui.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
                 if dlg.ShowModal() == wx.ID_OK:
                     self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
-                    self.frame.toolbar.enable_layer_view_tool()
+                    self.toolbar.enable_layer_view_tool()
                     self.show_layer_mesh()
 
     def show_model_mesh(self, event=None):
-        self.frame.toolbar.toggle_model_view()
+        self.toolbar.toggle_model_view()
         self.frame.model_view.show_model_mesh()
 
     def show_layer_mesh(self, event=None):
-        self.frame.toolbar.toggle_layer_view()
+        self.toolbar.toggle_layer_view()
         self.frame.model_view.show_layer_mesh()
 
     def frame_size_changed(self):
@@ -140,273 +148,6 @@ class MainFrameController:
         self.frame.Refresh()
 
 
-class ParameterPanel(wx.Panel):
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent)
-
-        sizer = wx.FlexGridSizer(0, 3, 0, 0)
-        self.SetSizer(sizer)
-
-    def on_update(self, event):
-        raise NotImplementedError
-
-    def add_spin_ctrl_double(self, label, min_, max_, unit="", offset_bottom=False):
-        """
-        Adds a wx.SpinCtrlDouble to the Panel and sets its event handler for wx.EVT_SPINCTRLDOUBLE to self.on_update.
-        Control is configured with 2 digits and an increment of 0.1 for now.
-
-        :param label: Text for label in front of control
-        :param min_: Minimum value for the control
-        :param max_: Maximum value for the control
-        :param unit: Text for label behind the control
-        :param offset_bottom: Should the control be rendered with a bottom margin
-        :return: Instance of wx.SpinCtrlDouble
-        """
-        sizer = self.GetSizer()
-
-        margin = wx.TOP
-        if offset_bottom:
-            margin |= wx.BOTTOM
-
-        # Label in front of control
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, label), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
-
-        # The control itself
-        ctrl = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0.0, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        ctrl.SetDigits(2)
-        ctrl.SetIncrement(0.1)
-        sizer.Add(ctrl, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
-
-        # Label behind the control
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, "mm"), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT | margin, 7)
-
-        ctrl.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
-
-        return ctrl
-
-    def add_spin_ctrl(self, label, min_, max_, unit="", offset_bottom=False):
-        """
-        Adds a wx.SpinCtrl to the Panel and sets its event handler for wx.EVT_SPINCTRL to self.on_update
-
-        :param label: Text for label in front of control
-        :param min_: Minimum value for the control
-        :param max_: Maximum value for the control
-        :param unit: Text for label behind the control
-        :param offset_bottom: Should the control be rendered with a bottom margin
-        :return: Instance of wx.SpinCtrl
-        """
-        sizer = self.GetSizer()
-
-        margin = wx.TOP
-        if offset_bottom:
-            margin |= wx.BOTTOM
-
-        # Label in front of control
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, label), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
-
-        # The control itself
-        ctrl = wx.SpinCtrl(self, wx.ID_ANY, min=min_, max=max_, style=wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS)
-        sizer.Add(ctrl, 0, wx.EXPAND | wx.ALIGN_CENTER_VERTICAL | wx.LEFT | margin, 7)
-
-        # Label behind control
-        sizer.Add(wx.StaticText(self, wx.ID_ANY, unit), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT | margin, 7)
-
-        ctrl.Bind(wx.EVT_SPINCTRL, self.on_update)
-
-        return ctrl
-
-
-class PrintOptionsPanel(ParameterPanel):
-    def __init__(self, parent, controller):
-        self.controller = controller
-        ParameterPanel.__init__(self, parent)
-
-        self.ctrl_first_layer_height = self.add_spin_ctrl_double("First layer height", 0.0, 10.0, "mm")
-        self.ctrl_layer_height = self.add_spin_ctrl_double("Layer height", 0.0, 10.0, "mm", True)
-
-        self.ctrl_perimeters = self.add_spin_ctrl("Perimeters", 1, 100, "", True)
-
-        self.ctrl_top_layers = self.add_spin_ctrl("Top layers", 0, 100)
-        self.ctrl_bottom_layers = self.add_spin_ctrl("Bottom layers", 0, 100)
-        self.ctrl_infill_angle = self.add_spin_ctrl("Infill angle", 0, 90, "°")
-        self.ctrl_infill_overlap = self.add_spin_ctrl("Infill overlap", 0, 100, "%", True)
-
-        self.ctrl_first_layer_speed = self.add_spin_ctrl("First layer speed", 1, 1000, "mm/sec")
-        self.ctrl_first_layer_speed.Disable()
-        self.ctrl_print_speed = self.add_spin_ctrl("Print speed", 1, 1000, "mm/sec")
-        self.ctrl_print_speed.Disable()
-        self.ctrl_travel_speed = self.add_spin_ctrl("Travel speed", 1, 10000, "mm/src", True)
-        self.ctrl_travel_speed.Disable()
-
-        self.Layout()
-
-        self.controller.init_options(self)
-
-    def on_update(self, event):
-        self.controller.update_print_options(self)
-
-
-class PrinterSettingsPanel(ParameterPanel):
-    def __init__(self, parent, controller):
-        self.controller = controller
-        ParameterPanel.__init__(self, parent)
-
-        self.ctrl_build_volume_width = self.add_spin_ctrl("Build volume width", 1, 1000, "mm")
-        self.ctrl_build_volume_depth = self.add_spin_ctrl("Build volume depth", 1, 1000, "mm")
-        self.ctrl_build_volume_height = self.add_spin_ctrl("Build volume height", 1, 1000, "mm", True)
-
-        self.ctrl_nozzle_diameter = self.add_spin_ctrl_double("Nozzle diameter", 0.1, 2.0, "mm", True)
-
-        self.ctrl_filament_diameter = self.add_spin_ctrl_double("Filament diameter", 1.0, 5.0, "mm", True)
-
-        self.Layout()
-
-        self.controller.init_printer_settings(self)
-
-    def on_update(self, event):
-        self.controller.update_printer_settings(self)
-        pass
-
-
-class MainFrameToolBar(wx.ToolBar):
-    def __init__(self, frame, controller):
-        wx.ToolBar.__init__(self, frame, style=wx.TB_DEFAULT_STYLE)
-        self.frame = frame
-        self.controller = controller
-        self.tool_slice = None
-        self.tool_model_view = None
-        self.tool_layer_view = None
-        self.tool_view_all = None
-        self.tool_view_from_top = None
-
-        self._create_tools()
-
-    def enable_model_tools(self, enable=True):
-        self.EnableTool(self.tool_slice.GetId(), enable)
-        self.EnableTool(self.tool_view_all.GetId(), enable)
-        self.EnableTool(self.tool_view_from_top.GetId(), enable)
-
-    def enable_layer_view_tool(self, enable=True):
-        self.EnableTool(self.tool_layer_view.GetId(), enable)
-
-    def toggle_model_view(self):
-        self.ToggleTool(self.tool_model_view.GetId(), True)
-
-    def toggle_layer_view(self):
-        self.ToggleTool(self.tool_layer_view.GetId(), True)
-
-    def _create_tools(self):
-        tool_open = self.AddTool(wx.ID_ANY, "Load model", icons.plussquare24.GetBitmap(), shortHelp="Load model")
-
-        self.AddSeparator()
-
-        self.tool_slice = self.AddTool(wx.ID_ANY,
-                                       "Slice model",
-                                       icons.play24.GetBitmap(),
-                                       icons.play24_disabled.GetBitmap(),
-                                       shortHelp="Slice model")
-
-        self.AddSeparator()
-
-        self.tool_model_view = self.AddRadioTool(wx.ID_ANY,
-                                                 "Model view",
-                                                 icons.box24.GetBitmap(),
-                                                 icons.box24_disabled.GetBitmap(),
-                                                 shortHelp="Model view")
-
-        self.tool_layer_view = self.AddRadioTool(wx.ID_ANY,
-                                                 "Layer view",
-                                                 icons.boxsliced24.GetBitmap(),
-                                                 icons.boxsliced24_disabled.GetBitmap(),
-                                                 shortHelp="Layer view")
-
-        self.AddSeparator()
-
-        self.tool_view_all = self.AddTool(wx.ID_ANY,
-                                          "View all",
-                                          icons.maximize24.GetBitmap(),
-                                          icons.maximize24_disabled.GetBitmap(),
-                                          shortHelp="View all")
-
-        self.tool_view_from_top = self.AddTool(wx.ID_ANY,
-                                               "View from top",
-                                               icons.boxtop24.GetBitmap(),
-                                               icons.boxtop24_disabled.GetBitmap(),
-                                               shortHelp="View from top")
-
-        self.Realize()
-
-        self.frame.Bind(wx.EVT_TOOL, self.controller.load_model, id=tool_open.GetId())
-        self.frame.Bind(wx.EVT_TOOL, self.controller.view_all, id=self.tool_view_all.GetId())
-        self.frame.Bind(wx.EVT_TOOL, self.controller.slice_model, id=self.tool_slice.GetId())
-        self.frame.Bind(wx.EVT_TOOL, self.controller.show_model_mesh, id=self.tool_model_view.GetId())
-        self.frame.Bind(wx.EVT_TOOL, self.controller.show_layer_mesh, id=self.tool_layer_view.GetId())
-        self.frame.Bind(wx.EVT_TOOL, self.controller.view_from_top, id=self.tool_view_from_top.GetId())
-
-        self.enable_model_tools(False)
-        self.enable_layer_view_tool(False)
-
-
-class MainFrame(wx.Frame):
-    ACCEL_EXIT = wx.NewIdRef()
-
-    def __init__(self):
-        self.tool_slice = None
-        self.tool_model_view = None
-        self.tool_layer_view = None
-        self.tool_view_all = None
-        self.tool_view_from_top = None
-        self.settings = settings.Settings()
-        self.settings.load_from_file()
-        self.controller = MainFrameController(self, self.settings)
-
-        wx.Frame.__init__(self, None, title="Slice2Print", size=self.settings.app_window_size)
-
-        self.SetMinSize((640, 480))
-
-        self.toolbar = MainFrameToolBar(self, self.controller)
-        self.SetToolBar(self.toolbar)
-        self.status_bar = self.CreateStatusBar(1)
-        sizer = wx.BoxSizer()
-        panel = wx.Panel(self, wx.ID_ANY)
-        sizer.Add(panel, 1, wx.EXPAND)
-        self.SetSizer(sizer)
-
-        self.model_view = modelview.ModelView(panel, self.settings.build_volume)
-
-        self.settings_notebook = wx.Notebook(panel)
-        self.print_options_panel = PrintOptionsPanel(self.settings_notebook, self.controller)
-        self.printer_settings_panel = PrinterSettingsPanel(self.settings_notebook, self.controller)
-
-        self.settings_notebook.AddPage(self.print_options_panel, "Options")
-        self.settings_notebook.AddPage(self.printer_settings_panel, "Printer")
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.model_view, 1, wx.EXPAND)
-        sizer.Add(self.settings_notebook, 0, wx.EXPAND | wx.LEFT, 7)
-        panel.SetSizer(sizer)
-        self.Layout()
-
-        self.Bind(wx.EVT_MENU, self.on_exit, id=MainFrame.ACCEL_EXIT)
-        self.Bind(wx.EVT_SIZE, self.on_size)
-        self.Bind(wx.EVT_CLOSE, self.on_close)
-
-        self.SetAcceleratorTable(
-            wx.AcceleratorTable([wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_ESCAPE, MainFrame.ACCEL_EXIT)]))
-
-        self.Maximize(self.settings.app_window_maximized)
-
-    def on_exit(self, event):
-        self.Close()
-
-    def on_size(self, event):
-        self.controller.frame_size_changed()
-        event.Skip()
-
-    def on_close(self, event):
-        self.controller.close_frame()
-
-
 if __name__ == "__main__":
     if sys.platform == "win32":
         # https://docs.microsoft.com/en-us/windows/desktop/api/Winuser/nf-winuser-setthreaddpiawarenesscontext
@@ -416,7 +157,4 @@ if __name__ == "__main__":
         # https://github.com/prusa3d/PrusaSlicer/blob/eebb9e3fe79cbda736bf95349c5c403ec4aef184/src/slic3r/GUI/GUI_App.cpp#L90
         # https://github.com/prusa3d/PrusaSlicer/blob/563a1a8441dbb7586a167c4bdce0e083e3774980/src/slic3r/GUI/GUI_Utils.hpp#L55
 
-    app = wx.App()
-    frame = MainFrame()
-    frame.Show()
-    app.MainLoop()
+    MainFrameController().main()
