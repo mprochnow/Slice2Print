@@ -1,4 +1,4 @@
 from .toolbar import *
 from .dialog import *
 from .panel import PrintOptionsPanel, PrinterSettingsPanel
-from .frame import MainFrame
+from .frame import MainFrame, MainFrameFileDropTarget

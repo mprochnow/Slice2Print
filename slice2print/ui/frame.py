@@ -3,6 +3,19 @@ import wx
 from ui import PrintOptionsPanel, PrinterSettingsPanel, modelview
 
 
+class MainFrameFileDropTarget(wx.FileDropTarget):
+    def __init__(self, file_drop_callback):
+        wx.FileDropTarget.__init__(self)
+        self.file_drop_callback = file_drop_callback
+
+    def OnDropFiles(self, x, y, filenames):
+        self.file_drop_callback(filenames)
+        return True
+
+    def OnDragOver(self, x, y, d):
+        return wx.DragMove
+
+
 class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
 

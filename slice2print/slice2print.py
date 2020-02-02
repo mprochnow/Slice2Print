@@ -35,28 +35,37 @@ class MainFrameController:
         self.frame = ui.MainFrame(self, self.settings)
         self.toolbar = ui.MainFrameToolBar(self.frame, self)
         self.frame.SetToolBar(self.toolbar)
+        self.frame.SetDropTarget(ui.MainFrameFileDropTarget(self.on_drop_files))
 
     def main(self):
         self.frame.Show()
         self.app.MainLoop()
 
+    def on_drop_files(self, filenames):
+        if filenames:
+            self._load_file(filenames[0])
+
     def load_model(self, event=None):
         with wx.FileDialog(self.frame, "Load model", wildcard="3D model (*.stl)|*.stl|All files (*.*)|*.*",
                            style=wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() != wx.ID_CANCEL:
-                filename = dlg.GetPath()
-                try:
-                    with wx.BusyInfo("Loading model...", self.frame):
-                        self.model = model.Model.from_file(filename)
-                        self.frame.model_view.set_model(self.model)
-                        self.show_model_mesh()
+                self._load_file(dlg.GetPath())
 
-                    self.toolbar.enable_model_tools()
-                    self.frame.status_bar.SetStatusText(
-                        "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
-                except (AssertionError, IOError, ValueError, struct.error) as e:
-                    d = wx.MessageDialog(self.frame, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
-                    d.ShowModal()
+    def _load_file(self, filename):
+        try:
+            with wx.BusyInfo("Loading model...", self.frame):
+                self.model = model.Model.from_file(filename)
+                self.frame.model_view.set_model(self.model)
+                self.show_model_mesh()
+
+            self.toolbar.enable_model_tools()
+            self.frame.status_bar.SetStatusText(
+                "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
+        except (AssertionError, IOError, ValueError, struct.error) as e:
+            d = wx.MessageDialog(self.frame, str(e), "Error while open file", style=wx.OK | wx.ICON_ERROR)
+            d.ShowModal()
+            return False
+        return True
 
     def view_all(self, event=None):
         self.frame.model_view.view_all()
