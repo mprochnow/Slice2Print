@@ -1,3 +1,6 @@
+Icons where exported with Inkscape as PNG than converted with img2py.
+Color for disabled icons is (192, 196, 196)
+
 Source of Icons: https://feathericons.com/ 
 
 box-sliced.svg/boxsliced24.png are derived from box.svg

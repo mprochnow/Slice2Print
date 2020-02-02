@@ -43,6 +43,7 @@ class MainFrameController:
                         self.frame.model_view.set_model(self.model)
                         self.show_model_mesh()
 
+                    self.frame.enable_tools()
                     self.frame.status_bar.SetStatusText(
                         "Model size: {:.2f} x {:.2f} x {:.2f} mm".format(*self.model.dimensions))
                 except (AssertionError, IOError, ValueError, struct.error) as e:
@@ -56,12 +57,13 @@ class MainFrameController:
         self.frame.model_view.view_from_top()
 
     def slice_model(self, event=None):
-        slicer_config = self.settings.get_slicer_config()
+        if self.model:
+            slicer_config = self.settings.get_slicer_config()
 
-        with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
-            if dlg.ShowModal() == wx.ID_OK:
-                self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
-                self.show_layer_mesh()
+            with dialog.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
+                    self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
+                    self.show_layer_mesh()
 
     def show_model_mesh(self, event=None):
         self.frame.GetToolBar().ToggleTool(self.frame.tool_model_view.GetId(), True)
@@ -269,8 +271,12 @@ class MainFrame(wx.Frame):
     ACCEL_EXIT = wx.NewIdRef()
 
     def __init__(self):
+        self.toolbar = None
+        self.tool_slice = None
         self.tool_model_view = None
         self.tool_layer_view = None
+        self.tool_view_all = None
+        self.tool_view_from_top = None
         self.settings = settings.Settings()
         self.settings.load_from_file()
         self.controller = MainFrameController(self, self.settings)
@@ -279,7 +285,7 @@ class MainFrame(wx.Frame):
 
         self.SetMinSize((640, 480))
 
-        self.toolbar = self.create_toolbar()
+        self.create_toolbar()
         self.status_bar = self.CreateStatusBar(1)
         sizer = wx.BoxSizer()
         panel = wx.Panel(self, wx.ID_ANY)
@@ -311,29 +317,62 @@ class MainFrame(wx.Frame):
         self.Maximize(self.settings.app_window_maximized)
 
     def create_toolbar(self):
-        toolbar = self.CreateToolBar()
-        tool_open = toolbar.AddTool(wx.ID_ANY, "Load model", icons.plussquare24.GetBitmap(), shortHelp="Load model")
-        toolbar.AddSeparator()
-        tool_slice = toolbar.AddTool(wx.ID_ANY, "Slice model", icons.play24.GetBitmap(), shortHelp="Slice model")
-        toolbar.AddSeparator()
-        self.tool_model_view = toolbar.AddRadioTool(
-            wx.ID_ANY, "Model view", icons.box.GetBitmap(), shortHelp="Model view")
-        self.tool_layer_view = toolbar.AddRadioTool(
-            wx.ID_ANY, "Layer view", icons.boxsliced24.GetBitmap(), shortHelp="Layer view")
-        toolbar.AddSeparator()
-        tool_view_all = toolbar.AddTool(wx.ID_ANY, "View all", icons.maximize.GetBitmap(), shortHelp="View all")
-        tool_view_from_top = toolbar.AddTool(
-            wx.ID_ANY, "View from top", icons.boxtop24.GetBitmap(), shortHelp="View from top")
-        toolbar.Realize()
+        self.toolbar = self.CreateToolBar()
+
+        tool_open = self.toolbar.AddTool(wx.ID_ANY, "Load model", icons.plussquare24.GetBitmap(), shortHelp="Load model")
+
+        self.toolbar.AddSeparator()
+
+        self.tool_slice = self.toolbar.AddTool(wx.ID_ANY,
+                                               "Slice model",
+                                               icons.play24.GetBitmap(),
+                                               icons.play24_disabled.GetBitmap(),
+                                               shortHelp="Slice model")
+
+        self.toolbar.AddSeparator()
+
+        self.tool_model_view = self.toolbar.AddRadioTool(wx.ID_ANY,
+                                                         "Model view",
+                                                         icons.box24.GetBitmap(),
+                                                         icons.box24_disabled.GetBitmap(),
+                                                         shortHelp="Model view")
+
+        self.tool_layer_view = self.toolbar.AddRadioTool(wx.ID_ANY,
+                                                         "Layer view",
+                                                         icons.boxsliced24.GetBitmap(),
+                                                         icons.boxsliced24_disabled.GetBitmap(),
+                                                         shortHelp="Layer view")
+
+        self.toolbar.AddSeparator()
+
+        self.tool_view_all = self.toolbar.AddTool(wx.ID_ANY,
+                                                  "View all",
+                                                  icons.maximize24.GetBitmap(),
+                                                  icons.maximize24_disabled.GetBitmap(),
+                                                  shortHelp="View all")
+
+        self.tool_view_from_top = self.toolbar.AddTool(wx.ID_ANY,
+                                                       "View from top",
+                                                       icons.boxtop24.GetBitmap(),
+                                                       icons.boxtop24_disabled.GetBitmap(),
+                                                       shortHelp="View from top")
+
+        self.toolbar.Realize()
 
         self.Bind(wx.EVT_TOOL, self.controller.load_model, id=tool_open.GetId())
-        self.Bind(wx.EVT_TOOL, self.controller.view_all, id=tool_view_all.GetId())
-        self.Bind(wx.EVT_TOOL, self.controller.slice_model, id=tool_slice.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.view_all, id=self.tool_view_all.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.slice_model, id=self.tool_slice.GetId())
         self.Bind(wx.EVT_TOOL, self.controller.show_model_mesh, id=self.tool_model_view.GetId())
         self.Bind(wx.EVT_TOOL, self.controller.show_layer_mesh, id=self.tool_layer_view.GetId())
-        self.Bind(wx.EVT_TOOL, self.controller.view_from_top, id=tool_view_from_top.GetId())
+        self.Bind(wx.EVT_TOOL, self.controller.view_from_top, id=self.tool_view_from_top.GetId())
 
-        return toolbar
+        self.enable_tools(False)
+
+    def enable_tools(self, enable=True):
+        self.toolbar.EnableTool(self.tool_slice.GetId(), enable)
+        self.toolbar.EnableTool(self.tool_layer_view.GetId(), enable)
+        self.toolbar.EnableTool(self.tool_view_all.GetId(), enable)
+        self.toolbar.EnableTool(self.tool_view_from_top.GetId(), enable)
 
     def on_exit(self, event):
         self.Close()
