@@ -19,6 +19,8 @@ import pyclipper
 
 
 class Layer:
+    MIN_DIST_BETWEEN_POINTS = 50
+
     def __init__(self, cfg, contour, layer_no):
         self.outlines = []
         self.perimeters = []
@@ -32,6 +34,11 @@ class Layer:
         self._merge_intersecting_meshes(contour)
 
     def _merge_intersecting_meshes(self, contour):
+        def dist_longer_than(p1, p2, d):
+            x = p2[0] - p1[0]
+            y = p2[1] - p1[1]
+            return d*d < x**2 + y**2
+
         pc = pyclipper.Pyclipper()
 
         for intersections in contour:
@@ -39,12 +46,15 @@ class Layer:
                 path = []
 
                 for intersection in intersections:
-                    # Ensure that each element in path is different
-                    if not path or path and path[-1] != intersection.xy:
+                    if not path or path and dist_longer_than(path[-1], intersection.xy, self.MIN_DIST_BETWEEN_POINTS):
                         path.append(intersection.xy)
 
                 if len(path) > 1:
-                    pc.AddPath(path, pyclipper.PT_SUBJECT, True)
+                    try:
+                        pc.AddPath(path, pyclipper.PT_SUBJECT, True)
+                    except pyclipper.ClipperException:
+                        print(path)
+                        raise
 
         solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
