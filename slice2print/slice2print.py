@@ -15,6 +15,7 @@
 
 import ctypes
 import struct
+import os.path
 import sys
 
 import wx
@@ -28,6 +29,7 @@ import ui
 class MainFrameController:
     def __init__(self):
         self.model = None
+        self.sliced_model = None
         self.settings = settings.Settings()
         self.settings.load_from_file()
 
@@ -67,6 +69,12 @@ class MainFrameController:
             return False
         return True
 
+    def layer_to_svg(self, event=None):
+        layer_no = self.frame.model_view.layer_slider.GetValue() - 1
+        filename = os.path.join(os.path.expanduser("~"), "layer.svg")
+
+        self.sliced_model.layers[layer_no].to_svg(filename)
+
     def view_all(self, event=None):
         self.frame.model_view.view_all()
 
@@ -79,7 +87,8 @@ class MainFrameController:
 
             with ui.SlicerDialog(self.frame, self.model, slicer_config) as dlg:
                 if dlg.ShowModal() == wx.ID_OK:
-                    self.frame.model_view.set_sliced_model(dlg.get_sliced_model())
+                    self.sliced_model = dlg.get_sliced_model()
+                    self.frame.model_view.set_sliced_model(self.sliced_model)
                     self.toolbar.enable_layer_view_tool()
                     self.show_layer_mesh()
 

@@ -161,6 +161,26 @@ class Layer:
 
         return pco.Execute(inset * self.cfg.VERTEX_PRECISION)
 
+    def to_svg(self, filename):
+        with open(filename, "w") as f:
+            f.write('<?xml version="1.0" standalone="no"?>\n')
+            f.write('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="-100 -100 200 200">\n')
+            f.write('<path d="')
+
+            for outline in self.outlines:
+                first = None
+                for x, y in outline:
+                    if first is None:
+                        f.write(f'M {x/self.cfg.VERTEX_PRECISION} {-y/self.cfg.VERTEX_PRECISION}')
+                        first = (x, y)
+                    else:
+                        f.write(f' L {x/self.cfg.VERTEX_PRECISION} {-y/self.cfg.VERTEX_PRECISION}')
+
+                f.write(f' L {first[0]/self.cfg.VERTEX_PRECISION} {-first[1]/self.cfg.VERTEX_PRECISION}')
+
+            f.write('" fill="none" stroke="black" stroke-width="0.1"/>')
+            f.write('</svg>\n')
+
 
 class SlicedModel:
     def __init__(self, cfg, bounding_box, contours):

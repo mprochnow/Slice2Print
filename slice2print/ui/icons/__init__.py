@@ -4,3 +4,4 @@ from .box import *
 from .boxsliced import *
 from .plussquare import *
 from .boxtop import *
+from .image import *

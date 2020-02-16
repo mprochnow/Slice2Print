@@ -22,6 +22,7 @@ class MainFrameToolBar(wx.ToolBar):
 
     def enable_layer_view_tool(self, enable=True):
         self.EnableTool(self.tool_layer_view.GetId(), enable)
+        self.EnableTool(self.tool_svg.GetId(), enable)
 
     def toggle_model_view(self):
         self.ToggleTool(self.tool_model_view.GetId(), True)
@@ -68,6 +69,14 @@ class MainFrameToolBar(wx.ToolBar):
                                                icons.boxtop24_disabled.GetBitmap(),
                                                shortHelp="View from top")
 
+        self.AddSeparator()
+
+        self.tool_svg = self.AddTool(wx.ID_ANY,
+                                     "Layer outline to SVG",
+                                     icons.image24.GetBitmap(),
+                                     icons.image24_disabled.GetBitmap(),
+                                     shortHelp="Layer outline to SVG")
+
         self.Realize()
 
         self.frame.Bind(wx.EVT_TOOL, self.controller.load_model, id=tool_open.GetId())
@@ -76,6 +85,7 @@ class MainFrameToolBar(wx.ToolBar):
         self.frame.Bind(wx.EVT_TOOL, self.controller.show_model_mesh, id=self.tool_model_view.GetId())
         self.frame.Bind(wx.EVT_TOOL, self.controller.show_layer_mesh, id=self.tool_layer_view.GetId())
         self.frame.Bind(wx.EVT_TOOL, self.controller.view_from_top, id=self.tool_view_from_top.GetId())
+        self.frame.Bind(wx.EVT_TOOL, self.controller.layer_to_svg, id=self.tool_svg.GetId())
 
         self.enable_model_tools(False)
         self.enable_layer_view_tool(False)
