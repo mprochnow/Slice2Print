@@ -316,8 +316,8 @@ class Slicer:
 
         self.update_interval = max(1, self.model.facet_count // 100)
 
-        self.layer_count = math.floor((self.model.dimensions.z - slicer_config.first_layer_height) /
-                                      slicer_config.layer_height + 1)
+        self.layer_count = math.ceil((self.model.dimensions.z - slicer_config.first_layer_height) /
+                                     slicer_config.layer_height + 1)
         self.contours = []
         for i in range(self.layer_count):
             z = self.first_layer_height + i * self.layer_height

@@ -18,6 +18,10 @@ import numpy as np
 import pyclipper
 
 
+class EmptyLayerException(Exception):
+    pass
+
+
 class Layer:
     MIN_DIST_BETWEEN_POINTS = 50
 
@@ -49,17 +53,17 @@ class Layer:
                     if not path or path and dist_longer_than(path[-1], intersection.xy, self.MIN_DIST_BETWEEN_POINTS):
                         path.append(intersection.xy)
 
-                if len(path) > 1:
-                    try:
-                        pc.AddPath(path, pyclipper.PT_SUBJECT, True)
-                    except pyclipper.ClipperException:
-                        print(path)
-                        raise
+                if len(path) > 2:
+                    pc.AddPath(path, pyclipper.PT_SUBJECT, True)
 
-        solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
+        try:
+            solution = pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO, pyclipper.PFT_NONZERO)
 
-        for outline in solution:
-            self.outlines.append(outline)
+            for outline in solution:
+                self.outlines.append(outline)
+        except pyclipper.ClipperException:
+            # Nothing to clip, i.e. no paths were added to the Pyclipper instance
+            raise EmptyLayerException
 
     def create_perimeters(self):
         self._create_external_perimeters()
@@ -97,53 +101,53 @@ class Layer:
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
 
         solution = self._offset_outline(self.cfg.perimeters, inset)
-        assert solution, "No boundaries for infill"
-        pc.AddPaths(solution, pyclipper.PT_CLIP, True)
+        if solution:
+            pc.AddPaths(solution, pyclipper.PT_CLIP, True)
 
-        bounds = pc.GetBounds()
+            bounds = pc.GetBounds()
 
-        # Create infill lines
-        line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
+            # Create infill lines
+            line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
 
-        extrusion_width = int(
-            (self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) * self.cfg.VERTEX_PRECISION)
-        infill_inc = int(math.ceil(line_length / extrusion_width))
+            extrusion_width = int(
+                (self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) * self.cfg.VERTEX_PRECISION)
+            infill_inc = int(math.ceil(line_length / extrusion_width))
 
-        if infill_inc > 0:
-            infill = list()
-            infill.append([[0, -line_length], [0, line_length]])
+            if infill_inc > 0:
+                infill = list()
+                infill.append([[0, -line_length], [0, line_length]])
 
-            for i in range(extrusion_width//2, infill_inc*extrusion_width, extrusion_width):
-                x = i + extrusion_width/2
-                infill.append([[x, -line_length], [x, line_length]])
-                infill.append([[-x, -line_length], [-x, line_length]])
+                for i in range(extrusion_width//2, infill_inc*extrusion_width, extrusion_width):
+                    x = i + extrusion_width/2
+                    infill.append([[x, -line_length], [x, line_length]])
+                    infill.append([[-x, -line_length], [-x, line_length]])
 
-            infill_angle = self.cfg.infill_angle
-            if self.layer_no % 2:
-                infill_angle += 90
+                infill_angle = self.cfg.infill_angle
+                if self.layer_no % 2:
+                    infill_angle += 90
 
-            infill_angle = np.radians(infill_angle)
+                infill_angle = np.radians(infill_angle)
 
-            c = np.cos(infill_angle)
-            s = np.sin(infill_angle)
-            rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
+                c = np.cos(infill_angle)
+                s = np.sin(infill_angle)
+                rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
 
-            #  Apply infill rotation
-            infill = np.matmul(infill, rotation_matrix)
+                #  Apply infill rotation
+                infill = np.matmul(infill, rotation_matrix)
 
-            pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
+                pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
 
-            # Clip infill lines
-            # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
-            solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+                # Clip infill lines
+                # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
+                solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
 
-            if solution.depth > 0:
-                assert solution.depth == 1, f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
+                if solution.depth > 0:
+                    assert solution.depth == 1, f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
 
-                for child in solution.Childs:
-                    self.infill.append(child.Contour)
+                    for child in solution.Childs:
+                        self.infill.append(child.Contour)
 
-        self.node_count += len(self.infill) * 2
+            self.node_count += len(self.infill) * 2
 
     def _offset_outline(self, nr_of_perimeters, inset):
         """
@@ -199,7 +203,10 @@ class SlicedModel:
         self.bounding_box = bounding_box
 
         for layer_no, contour in enumerate(contours):
-            self.layers.append(Layer(cfg, contour, layer_no))
+            try:
+                self.layers.append(Layer(cfg, contour, layer_no))
+            except EmptyLayerException:
+                pass
 
     def create_perimeters(self):
         for layer in self.layers:
