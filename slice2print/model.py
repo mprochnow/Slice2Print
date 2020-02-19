@@ -15,6 +15,7 @@
 
 import collections
 import enum
+import functools
 import struct
 
 import numpy
@@ -56,16 +57,13 @@ class BoundingBox:
         self.x_min = self.y_min = self.z_min = float("inf")
         self.x_max = self.y_max = self.z_max = float("-inf")
 
-    def update(self, vertex):
-        """
-        :param vertex: Used to update min and max values for the x, y and z axis
-        """
-        self.x_min = min(vertex[0], self.x_min)
-        self.x_max = max(vertex[0], self.x_max)
-        self.y_min = min(vertex[1], self.y_min)
-        self.y_max = max(vertex[1], self.y_max)
-        self.z_min = min(vertex[2], self.z_min)
-        self.z_max = max(vertex[2], self.z_max)
+    def set_boundaries(self, x_min, x_max, y_min, y_max, z_min, z_max):
+        self.x_min = x_min
+        self.x_max = x_max
+        self.y_min = y_min
+        self.y_max = y_max
+        self.z_min = z_min
+        self.z_max = z_max
 
     def diagonal(self):
         """
@@ -95,9 +93,11 @@ class StlFileParser:
         self.vertex2 = None
         self.vertex3 = None
 
+        self.x_min = self.y_min = self.z_min = float("inf")
+        self.x_max = self.y_max = self.z_max = float("-inf")
         self.bb = BoundingBox()
 
-        self.vertices = collections.OrderedDict()  # key: (vertex, normal), value: index
+        self.vertices = dict()  # key: (vertex, normal), value: index
         self.indices = []
         self.index = 0
 
@@ -122,12 +122,29 @@ class StlFileParser:
                 return self._parse_binary(f)
 
     def _add_vertex(self, vertex, normal):
-        try:
-            self.indices.append(self.vertices[(vertex, normal)])
-        except KeyError:
-            self.vertices[(vertex, normal)] = self.index
+        t = (vertex, normal)
+
+        # This is faster than handling KeyErrors
+        if t in self.vertices:
+            self.indices.append(self.vertices[t])
+        else:
+            self.vertices[t] = self.index
             self.indices.append(self.index)
             self.index += 1
+
+        # This is faster than using min()/max()
+        if vertex[0] < self.x_min:
+            self.x_min = vertex[0]
+        if vertex[0] > self.x_max:
+            self.x_max = vertex[0]
+        if vertex[1] < self.y_min:
+            self.y_min = vertex[1]
+        if vertex[1] > self.y_max:
+            self.y_max = vertex[1]
+        if vertex[2] < self.z_min:
+            self.z_min = vertex[2]
+        if vertex[2] > self.z_max:
+            self.z_max = vertex[2]
 
     def _parse_binary(self, f):
         """
@@ -135,13 +152,12 @@ class StlFileParser:
         :return: Tuple (vertices, normals, indices, bounding box)
         :raises struct.error: Thrown when parsing fails
         """
-        facet_structure = "<12fH"
-        size = struct.calcsize(facet_structure)
+        facet_structure = struct.Struct("<12fH")
 
         f.seek(80 + 4)  # Header size + size of facet count field
 
-        for facet in iter(lambda: f.read(size), b''):
-            result = struct.unpack(facet_structure, facet)
+        for facet in iter(functools.partial(f.read, facet_structure.size), b''):
+            result = facet_structure.unpack(facet)
 
             normal = result[0:3]
             vertex1 = result[3:6]
@@ -161,9 +177,7 @@ class StlFileParser:
 
             self.facet_count += 1
 
-            self.bb.update(vertex1)
-            self.bb.update(vertex2)
-            self.bb.update(vertex3)
+        self.bb.set_boundaries(self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
         return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
             numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
@@ -192,6 +206,8 @@ class StlFileParser:
                 break
 
             self.line_no += 1
+
+        self.bb.set_boundaries(self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
         return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
             numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
@@ -271,10 +287,6 @@ class StlFileParser:
         self._add_vertex(self.vertex3, self.normal)
 
         self.facet_count += 1
-
-        self.bb.update(self.vertex1)
-        self.bb.update(self.vertex2)
-        self.bb.update(self.vertex3)
 
         return True
 

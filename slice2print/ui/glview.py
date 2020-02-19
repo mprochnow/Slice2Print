@@ -242,8 +242,7 @@ class GlCanvas(wx.glcanvas.GLCanvas):
             if self.platform_mesh:
                 d = self.platform_mesh.dimensions
                 bb = model.BoundingBox()
-                bb.update((-d[0]/2, -d[2]/2, -d[1]/2))
-                bb.update((d[0]/2, d[2]/2, d[1]/2))
+                bb.set_boundaries(-d[0]/2, d[0]/2, -d[2]/2, d[2]/2, -d[1]/2, d[1]/2)
                 self.camera.view_all(bb)
                 self.camera.set_current_camera_distance_as_max()
 
