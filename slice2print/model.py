@@ -97,9 +97,12 @@ class StlFileParser:
         self.x_max = self.y_max = self.z_max = float("-inf")
         self.bb = BoundingBox()
 
-        self.vertices = dict()  # key: (vertex, normal), value: index
-        self.indices = []
         self.index = 0
+        self.index_mapping = dict()  # key: (vertex, normal), value: index
+
+        self.indices = []
+        self.vertices = []
+        self.normals = []
 
         self.facet_count = 0
 
@@ -124,12 +127,14 @@ class StlFileParser:
     def _add_vertex(self, vertex, normal):
         t = (vertex, normal)
 
-        # This is faster than handling KeyErrors
-        if t in self.vertices:
-            self.indices.append(self.vertices[t])
+        if t in self.index_mapping:
+            self.indices.append(self.index_mapping[t])
         else:
-            self.vertices[t] = self.index
+            self.vertices.append(vertex)
+            self.normals.append(normal)
             self.indices.append(self.index)
+
+            self.index_mapping[t] = self.index
             self.index += 1
 
         # This is faster than using min()/max()
@@ -179,9 +184,11 @@ class StlFileParser:
 
         self.bb.set_boundaries(self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
-        return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array(self.indices, numpy.uint32), self.bb, self.facet_count
+        return \
+            numpy.array(self.vertices, numpy.float32), \
+            numpy.array(self.normals, numpy.float32), \
+            numpy.array(self.indices, numpy.uint32), \
+            self.bb, self.facet_count
 
     def _parse_ascii(self, f):
         """
@@ -209,9 +216,11 @@ class StlFileParser:
 
         self.bb.set_boundaries(self.x_min, self.x_max, self.y_min, self.y_max, self.z_min, self.z_max)
 
-        return numpy.array([k[0] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array([k[1] for k, v in self.vertices.items()], numpy.float32), \
-            numpy.array(self.indices, numpy.uint32), self.bb, self.facet_count
+        return \
+            numpy.array(self.vertices, numpy.float32), \
+            numpy.array(self.normals, numpy.float32), \
+            numpy.array(self.indices, numpy.uint32), \
+            self.bb, self.facet_count
 
     def _do_start(self, line):
         assert line.startswith("solid"), "Expected keyword 'solid'"
