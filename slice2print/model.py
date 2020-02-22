@@ -18,7 +18,7 @@ import enum
 import functools
 import struct
 
-import numpy
+import numpy.linalg
 
 
 class Model:
@@ -170,11 +170,7 @@ class StlFileParser:
             vertex3 = result[9:12]
 
             if normal == (0.0, 0.0, 0.0):
-                v1 = numpy.array(vertex1)
-                v2 = numpy.array(vertex2)
-                v3 = numpy.array(vertex3)
-                n = numpy.cross(v2-v1, v3-v1)
-                normal = tuple(n / n.sum())
+                normal = self._calc_normal(vertex1, vertex2, vertex3)
 
             self._add_vertex(vertex1, normal)
             self._add_vertex(vertex2, normal)
@@ -285,11 +281,7 @@ class StlFileParser:
         self.parser_state = StlParserState.ENDLOOP
 
         if self.normal == (0.0, 0.0, 0.0):
-            v1 = numpy.array(self.vertex1)
-            v2 = numpy.array(self.vertex2)
-            v3 = numpy.array(self.vertex3)
-            n = numpy.cross(v2 - v1, v3 - v1)
-            self.normal = tuple(n / n.sum())
+            self.normal = self._calc_normal(self.vertex1, self.vertex2, self.vertex3)
 
         self._add_vertex(self.vertex1, self.normal)
         self._add_vertex(self.vertex2, self.normal)
@@ -304,3 +296,10 @@ class StlFileParser:
         self.parser_state = StlParserState.ENDFACET
 
         return True
+
+    def _calc_normal(self, vertex1, vertex2, vertex3):
+        v1 = numpy.array(vertex1)
+        v2 = numpy.array(vertex2)
+        v3 = numpy.array(vertex3)
+        n = numpy.cross(v2-v1, v3-v1)
+        return tuple(n / numpy.linalg.norm(n))
