@@ -25,9 +25,11 @@ class MainFrameToolBar(wx.ToolBar):
         self.EnableTool(self.tool_svg.GetId(), enable)
 
     def toggle_model_view(self):
+        self.EnableTool(self.tool_svg.GetId(), False)
         self.ToggleTool(self.tool_model_view.GetId(), True)
 
     def toggle_layer_view(self):
+        self.EnableTool(self.tool_svg.GetId(), True)
         self.ToggleTool(self.tool_layer_view.GetId(), True)
 
     def _create_tools(self):
