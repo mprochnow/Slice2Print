@@ -79,6 +79,8 @@ class Layer:
                 self.node_count += len(path)
 
             self.perimeters.append(solution)
+        else:
+            raise EmptyLayerException
 
     def _create_internal_perimeters(self):
         inset = self.cfg.extrusion_width / 2
@@ -209,8 +211,11 @@ class SlicedModel:
                 pass
 
     def create_perimeters(self):
-        for layer in self.layers:
-            layer.create_perimeters()
+        try:
+            for layer in self.layers:
+                layer.create_perimeters()
+        except EmptyLayerException:
+            self.layers.remove(layer)
 
     def create_top_and_bottom_layers(self):
         bottom_layers = self.cfg.bottom_layers
