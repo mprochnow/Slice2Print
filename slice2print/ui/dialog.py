@@ -67,7 +67,7 @@ class SlicerDialog(wx.Dialog):
             self.sliced_model.create_perimeters()
 
             self.update(120, "Creating top and bottom infill")
-            self.sliced_model.create_top_and_bottom_layers()
+            self.sliced_model.create_infill()
 
             self.EndModal(wx.ID_OK)
         else:

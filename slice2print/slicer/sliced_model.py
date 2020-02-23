@@ -96,31 +96,30 @@ class Layer:
             else:
                 break  # Nothing more to do here
 
-    def create_solid_infill(self):
+    def create_infill(self):
         pc = pyclipper.Pyclipper()
 
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
-
         solution = self._offset_outline(self.cfg.perimeters, inset)
+
         if solution:
             pc.AddPaths(solution, pyclipper.PT_CLIP, True)
 
-            bounds = pc.GetBounds()
-
             # Create infill lines
+            bounds = pc.GetBounds()
             line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
 
-            extrusion_width = int(
+            line_distance = int(
                 (self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) * self.cfg.VERTEX_PRECISION)
-            infill_inc = int(math.ceil(line_length / extrusion_width))
+            infill_inc = int(math.ceil(line_length / line_distance))
 
             if infill_inc > 0:
                 infill = list()
                 infill.append([[0, -line_length], [0, line_length]])
 
-                for i in range(extrusion_width//2, infill_inc*extrusion_width, extrusion_width):
-                    x = i + extrusion_width/2
+                for i in range(line_distance//2, infill_inc*line_distance, line_distance):
+                    x = i + line_distance/2
                     infill.append([[x, -line_length], [x, line_length]])
                     infill.append([[-x, -line_length], [-x, line_length]])
 
@@ -217,7 +216,7 @@ class SlicedModel:
         except EmptyLayerException:
             self.layers.remove(layer)
 
-    def create_top_and_bottom_layers(self):
+    def create_infill(self):
         bottom_layers = self.cfg.bottom_layers
         top_layers = self.cfg.top_layers
 
@@ -227,7 +226,7 @@ class SlicedModel:
 
         if bottom_layers > 0:
             for layer in self.layers[:bottom_layers]:
-                layer.create_solid_infill()
+                layer.create_infill()
 
         # if top_layers > 0:
         #     for layer in self.layers[-top_layers:]:

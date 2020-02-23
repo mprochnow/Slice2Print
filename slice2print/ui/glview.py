@@ -187,24 +187,14 @@ class GlCanvas(wx.glcanvas.GLCanvas):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         if self.model_mesh and not self.display_layer_mesh:
-            glPolygonOffset(1.0, 1.0)
-            glEnable(GL_POLYGON_OFFSET_FILL)
-
             self.model_mesh.update_projection_matrix(self.camera.get_projection_matrix())
             self.model_mesh.update_view_matrix(self.camera.get_view_matrix())
             self.model_mesh.draw()
 
-            glDisable(GL_POLYGON_OFFSET_FILL)
-
         if self.layer_mesh and self.display_layer_mesh:
-            glPolygonOffset(1.0, 1.0)
-            glEnable(GL_POLYGON_OFFSET_FILL)
-
             self.layer_mesh.update_projection_matrix(self.camera.get_projection_matrix())
             self.layer_mesh.update_view_matrix(self.camera.get_view_matrix())
             self.layer_mesh.draw()
-
-            glDisable(GL_POLYGON_OFFSET_FILL)
 
         if self.platform_mesh:
             self.platform_mesh.update_projection_matrix(self.camera.get_projection_matrix())

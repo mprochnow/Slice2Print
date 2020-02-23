@@ -108,7 +108,7 @@ class StlFileParser:
 
     def parse(self):
         """
-        :return: Tuple (vertices, normals, indices, bounding box)
+        :return: Tuple (vertices, normals, indices, bounding box, facet count)
         :raises AssertionError: Thrown when something mismatches the STL ASCII format
         :raises ValueError: Thrown when vertices or normals cannot be parsed
         :raises struct.error: Thrown when parsing of binary STL fails
@@ -154,7 +154,7 @@ class StlFileParser:
     def _parse_binary(self, f):
         """
         :param f: File handle
-        :return: Tuple (vertices, normals, indices, bounding box)
+        :return: Tuple (vertices, normals, indices, bounding box, facet count)
         :raises struct.error: Thrown when parsing fails
         """
         facet_structure = struct.Struct("<12fH")
@@ -188,7 +188,7 @@ class StlFileParser:
 
     def _parse_ascii(self, f):
         """
-        :return: Tuple (vertices, normals, indices, bounding box)
+        :return: Tuple (vertices, normals, indices, bounding box, facet count)
         :raises AssertionError: Thrown when something mismatches the STL ASCII format
         :raises ValueError: Thrown when vertices or normals cannot be parsed
         """
