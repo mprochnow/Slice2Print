@@ -7,7 +7,12 @@ construction using STL files" by Zhengyan Zhang and Sanjay Joshi.
 
 ## Requirements
 * Python 3.6+ (https://python.org)
-* python-opengl (http://pyopengl.sourceforge.net)
+* python-opengl 3.1.0+ (http://pyopengl.sourceforge.net)
 * numpy 1.16+ (https://numpy.org)
 * wxpython 4.0+ (https://wxpython.org)
 * pyclipper 1.0+ (https://github.com/fonttools/pyclipper)
+
+### Install requirements on Debian 10
+```bash
+$ sudo apt-get install python3 python3-opengl python3-numpy python3-wxgtk4.0 python3-pyclipper
+```
