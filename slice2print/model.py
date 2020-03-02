@@ -302,4 +302,7 @@ class StlFileParser:
         v2 = numpy.array(vertex2)
         v3 = numpy.array(vertex3)
         n = numpy.cross(v2-v1, v3-v1)
-        return tuple(n / numpy.linalg.norm(n))
+
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            return tuple(n / numpy.linalg.norm(n))
+
