@@ -228,9 +228,9 @@ class SlicedModel:
             for layer in self.layers[:bottom_layers]:
                 layer.create_infill()
 
-        # if top_layers > 0:
-        #     for layer in self.layers[-top_layers:]:
-        #         layer.create_solid_infill()
+        if top_layers > 0:
+            for layer in self.layers[-top_layers:]:
+                layer.create_infill()
 
     @property
     def layer_count(self):
