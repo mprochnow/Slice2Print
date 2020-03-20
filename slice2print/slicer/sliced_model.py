@@ -72,7 +72,7 @@ class Layer:
     def _create_external_perimeters(self):
         inset = self.cfg.extrusion_width_external_perimeter / 2
 
-        solution = self._offset_outline(1, inset)
+        solution = offset_outlines(self.cfg, self.layer_height, self.outlines, 1, inset)
 
         if solution:
             for path in solution:
@@ -86,7 +86,7 @@ class Layer:
         inset = self.cfg.extrusion_width / 2
 
         for i in range(1, self.cfg.perimeters):
-            solution = self._offset_outline(i+1, inset)
+            solution = offset_outlines(self.cfg, self.layer_height, self.outlines, i+1, inset)
 
             if solution:
                 for path in solution:
@@ -101,7 +101,7 @@ class Layer:
 
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
-        solution = self._offset_outline(self.cfg.perimeters, inset)
+        solution = offset_outlines(self.cfg, self.layer_height, self.outlines, self.cfg.perimeters, inset)
 
         if solution:
             pc.AddPaths(solution, pyclipper.PT_CLIP, True)
@@ -147,34 +147,9 @@ class Layer:
 
                     for child in solution.Childs:
                         self.infill.append(child.Contour)
+                        self.node_count += 2
 
-            self.node_count += len(self.infill) * 2
-
-    def _offset_outline(self, nr_of_perimeters, inset):
-        """
-        Offsets the outline of this layer by the given number of perimeters
-        and than subtract the result with the given inset. This ensures that
-        the resulting perimeters will not overlap themselves in tight loops.
-
-        :param nr_of_perimeters: How many perimeters should be offset
-        :param inset: Value to subtract after offsetting
-        :return: Result of PyclipperOffset.Execute()
-        """
-        pco = pyclipper.PyclipperOffset()
-
-        offset = self.cfg.extrusion_width_external_perimeter
-        offset += (nr_of_perimeters - 1) * self.cfg.extrusion_width
-        offset -= (nr_of_perimeters - 1) * self.layer_height * self.cfg.extrusion_overlap_factor
-
-        for outline in self.outlines:
-            pco.AddPath(outline, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        solution = pco.Execute(-offset * self.cfg.VERTEX_PRECISION)
-
-        pco.Clear()
-        pco.AddPaths(solution, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
-
-        return pco.Execute(inset * self.cfg.VERTEX_PRECISION)
+            # self.node_count += len(self.infill) * 2
 
     def to_svg(self, filename):
         with open(filename, "w") as f:
@@ -232,6 +207,79 @@ class SlicedModel:
             for layer in self.layers[-top_layers:]:
                 layer.create_infill()
 
+        self.create_island_top_layers(bottom_layers, top_layers)
+
+    # TODO needs work
+    def create_island_top_layers(self, bottom_layers, top_layers):
+        pc = pyclipper.Pyclipper()
+
+        # Loop backwards through the layers
+        for i in range(len(self.layers)-1, 1, -1):
+            lower_layer = self.layers[i - 1]
+            current_layer = self.layers[i]
+
+            # Subtract current layer from lower layer
+            pc.AddPaths(current_layer.outlines, pyclipper.PT_CLIP, True)
+            pc.AddPaths(lower_layer.outlines, pyclipper.PT_SUBJECT, True)
+
+            solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+            if solution:
+                pc.Clear()
+
+                pc.AddPaths(solution, pyclipper.PT_CLIP, True)
+
+                bounds = pc.GetBounds()
+                line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
+                x0 = bounds.right - bounds.left
+                y0 = bounds.bottom - bounds.top
+
+                line_distance = int((self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) *
+                                    self.cfg.VERTEX_PRECISION)
+                infill_inc = int(math.ceil(line_length / line_distance))
+                if infill_inc > 0:
+                    infill = list()
+                    infill.append([[0, -line_length], [0, line_length]])
+
+                    for j in range(line_distance//2, infill_inc*line_distance, line_distance):
+                        x = j + line_distance/2
+                        infill.append([[x, -line_length], [x, line_length]])
+                        infill.append([[-x, -line_length], [-x, line_length]])
+
+                    infill_angle = self.cfg.infill_angle
+                    if lower_layer.layer_no % 2:
+                        infill_angle += 90
+
+                    infill_angle = np.radians(infill_angle)
+
+                    c = np.cos(infill_angle)
+                    s = np.sin(infill_angle)
+                    rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
+
+                    translation_matrix = np.identity(2, np.float32)
+                    translation_matrix[1][0] = x0
+                    translation_matrix[1][1] = y0
+
+                    #  Apply infill rotation
+                    infill = np.matmul(infill, rotation_matrix)
+
+                    infill = np.matmul(infill, translation_matrix)
+
+                    pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
+
+                    # Clip infill lines
+                    # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
+                    solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+
+                    if solution.depth > 0:
+                        assert solution.depth == 1, \
+                            f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
+
+                        for child in solution.Childs:
+                            lower_layer.infill.append(child.Contour)
+                            lower_layer.node_count += 2
+
+            pc.Clear()
+
     @property
     def layer_count(self):
         return len(self.layers)
@@ -242,3 +290,32 @@ class SlicedModel:
         for layer in self.layers:
             result += layer.node_count
         return result
+
+
+def offset_outlines(cfg, layer_height, outlines, nr_of_perimeters, inset):
+    """
+    Offsets the outline of this layer by the given number of perimeters
+    and than subtract the result with the given inset. This ensures that
+    the resulting perimeters will not overlap themselves in tight loops.
+
+    :param cfg: Instance of SlicerConfig
+    :param layer_height: Layer height
+    :param outlines: List of closed paths which should be offset
+    :param nr_of_perimeters: How many perimeters should be offset
+    :param inset: Value to subtract after offsetting
+    :return: Result of PyclipperOffset.Execute()
+    """
+    pco = pyclipper.PyclipperOffset()
+
+    offset = cfg.extrusion_width_external_perimeter
+    offset += (nr_of_perimeters - 1) * cfg.extrusion_width
+    offset -= (nr_of_perimeters - 1) * layer_height * cfg.extrusion_overlap_factor
+
+    pco.AddPaths(outlines, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+    solution = pco.Execute(-offset * cfg.VERTEX_PRECISION)
+
+    pco.Clear()
+    pco.AddPaths(solution, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+
+    return pco.Execute(inset * cfg.VERTEX_PRECISION)
