@@ -17,6 +17,8 @@ import math
 import numpy as np
 import pyclipper
 
+from .infill import line_infill
+
 
 class EmptyLayerException(Exception):
     pass
@@ -97,59 +99,14 @@ class Layer:
                 break  # Nothing more to do here
 
     def create_infill(self):
-        pc = pyclipper.Pyclipper()
-
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
         solution = offset_outlines(self.cfg, self.layer_height, self.outlines, self.cfg.perimeters, inset)
-
         if solution:
-            pc.AddPaths(solution, pyclipper.PT_CLIP, True)
+            infill = line_infill(self.cfg, self.layer_no, solution)
 
-            # Create infill lines
-            bounds = pc.GetBounds()
-            line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
-
-            line_distance = int(
-                (self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) * self.cfg.VERTEX_PRECISION)
-            infill_inc = int(math.ceil(line_length / line_distance))
-
-            if infill_inc > 0:
-                infill = list()
-                infill.append([[0, -line_length], [0, line_length]])
-
-                for i in range(line_distance//2, infill_inc*line_distance, line_distance):
-                    x = i + line_distance/2
-                    infill.append([[x, -line_length], [x, line_length]])
-                    infill.append([[-x, -line_length], [-x, line_length]])
-
-                infill_angle = self.cfg.infill_angle
-                if self.layer_no % 2:
-                    infill_angle += 90
-
-                infill_angle = np.radians(infill_angle)
-
-                c = np.cos(infill_angle)
-                s = np.sin(infill_angle)
-                rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
-
-                #  Apply infill rotation
-                infill = np.matmul(infill, rotation_matrix)
-
-                pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
-
-                # Clip infill lines
-                # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
-                solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-
-                if solution.depth > 0:
-                    assert solution.depth == 1, f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
-
-                    for child in solution.Childs:
-                        self.infill.append(child.Contour)
-                        self.node_count += 2
-
-            # self.node_count += len(self.infill) * 2
+            self.infill.extend(infill)
+            self.node_count += 2 * len(infill)
 
     def to_svg(self, filename):
         with open(filename, "w") as f:
@@ -220,6 +177,7 @@ class SlicedModel:
             lower_layer = self.layers[i - 1]
             current_layer = self.layers[i]
 
+            # Offset current and lower layer by number of perimeters
             lower_layer_offset = offset_outlines(self.cfg, lower_layer.layer_height, lower_layer.outlines,
                                                  self.cfg.perimeters, inset)
             current_layer_offset = offset_outlines(self.cfg, current_layer.layer_height, current_layer.outlines,
@@ -231,59 +189,10 @@ class SlicedModel:
 
             solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
             if solution:
-                pc.Clear()
+                infill = line_infill(self.cfg, lower_layer.layer_no, solution)
 
-                pc.AddPaths(solution, pyclipper.PT_CLIP, True)
-
-                bounds = pc.GetBounds()
-                line_length = max(bounds.bottom-bounds.top, bounds.right-bounds.left)
-                x0 = bounds.right - bounds.left
-                y0 = bounds.bottom - bounds.top
-
-                line_distance = int((self.cfg.extrusion_width_infill - self.cfg.extrusion_overlap_factor/2) *
-                                    self.cfg.VERTEX_PRECISION)
-                infill_inc = int(math.ceil(line_length / line_distance))
-                if infill_inc > 0:
-                    infill = list()
-                    infill.append([[0, -line_length], [0, line_length]])
-
-                    for j in range(line_distance//2, infill_inc*line_distance, line_distance):
-                        x = j + line_distance/2
-                        infill.append([[x, -line_length], [x, line_length]])
-                        infill.append([[-x, -line_length], [-x, line_length]])
-
-                    infill_angle = self.cfg.infill_angle
-                    if lower_layer.layer_no % 2:
-                        infill_angle += 90
-
-                    infill_angle = np.radians(infill_angle)
-
-                    c = np.cos(infill_angle)
-                    s = np.sin(infill_angle)
-                    rotation_matrix = np.array([[c, -s], [s, c]], np.float32)
-
-                    translation_matrix = np.identity(2, np.float32)
-                    translation_matrix[1][0] = x0
-                    translation_matrix[1][1] = y0
-
-                    #  Apply infill rotation
-                    infill = np.matmul(infill, rotation_matrix)
-
-                    infill = np.matmul(infill, translation_matrix)
-
-                    pc.AddPaths(infill, pyclipper.PT_SUBJECT, False)
-
-                    # Clip infill lines
-                    # (Open paths will be returned as NodeTree, so we have to use PyClipper.Execute2() here)
-                    solution = pc.Execute2(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-
-                    if solution.depth > 0:
-                        assert solution.depth == 1, \
-                            f"PyClipper.Execute2() returned solution with depth != 1 ({solution.depth})"
-
-                        for child in solution.Childs:
-                            lower_layer.infill.append(child.Contour)
-                            lower_layer.node_count += 2
+                lower_layer.infill.extend(infill)
+                lower_layer.node_count += 2 * len(infill)
 
             pc.Clear()
 
