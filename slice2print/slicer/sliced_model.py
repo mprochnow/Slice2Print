@@ -213,14 +213,21 @@ class SlicedModel:
     def create_island_top_layers(self, bottom_layers, top_layers):
         pc = pyclipper.Pyclipper()
 
+        inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
+
         # Loop backwards through the layers
         for i in range(len(self.layers)-1, 1, -1):
             lower_layer = self.layers[i - 1]
             current_layer = self.layers[i]
 
+            lower_layer_offset = offset_outlines(self.cfg, lower_layer.layer_height, lower_layer.outlines,
+                                                 self.cfg.perimeters, inset)
+            current_layer_offset = offset_outlines(self.cfg, current_layer.layer_height, current_layer.outlines,
+                                                   self.cfg.perimeters, inset)
+
             # Subtract current layer from lower layer
-            pc.AddPaths(current_layer.outlines, pyclipper.PT_CLIP, True)
-            pc.AddPaths(lower_layer.outlines, pyclipper.PT_SUBJECT, True)
+            pc.AddPaths(current_layer_offset, pyclipper.PT_CLIP, True)
+            pc.AddPaths(lower_layer_offset, pyclipper.PT_SUBJECT, True)
 
             solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
             if solution:
