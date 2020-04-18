@@ -55,7 +55,7 @@ class Layer:
                     if not path or path and dist_longer_than(path[-1], intersection.xy, self.MIN_DIST_BETWEEN_POINTS):
                         path.append(intersection.xy)
 
-                if len(path) > 2:
+                if len(path) > 3:
                     pc.AddPath(path, pyclipper.PT_SUBJECT, True)
 
         try:
