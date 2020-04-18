@@ -183,16 +183,17 @@ class SlicedModel:
             current_layer_offset = offset_outlines(self.cfg, current_layer.layer_height, current_layer.outlines,
                                                    self.cfg.perimeters, inset)
 
-            # Subtract current layer from lower layer
-            pc.AddPaths(current_layer_offset, pyclipper.PT_CLIP, True)
-            pc.AddPaths(lower_layer_offset, pyclipper.PT_SUBJECT, True)
+            if lower_layer_offset and current_layer_offset:
+                # Subtract current layer from lower layer
+                pc.AddPaths(current_layer_offset, pyclipper.PT_CLIP, True)
+                pc.AddPaths(lower_layer_offset, pyclipper.PT_SUBJECT, True)
 
-            solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-            if solution:
-                infill = line_infill(self.cfg, lower_layer.layer_no, solution)
+                solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+                if solution:
+                    infill = line_infill(self.cfg, lower_layer.layer_no, solution)
 
-                lower_layer.infill.extend(infill)
-                lower_layer.node_count += 2 * len(infill)
+                    lower_layer.infill.extend(infill)
+                    lower_layer.node_count += 2 * len(infill)
 
             pc.Clear()
 
