@@ -74,7 +74,7 @@ class Layer:
     def _create_external_perimeters(self):
         inset = self.cfg.extrusion_width_external_perimeter / 2
 
-        solution = offset_outlines(self.cfg, self.layer_height, self.outlines, 1, inset)
+        solution = inset_outlines(self.cfg, self.layer_height, self.outlines, 1, inset)
 
         if solution:
             for path in solution:
@@ -88,7 +88,7 @@ class Layer:
         inset = self.cfg.extrusion_width / 2
 
         for i in range(1, self.cfg.perimeters):
-            solution = offset_outlines(self.cfg, self.layer_height, self.outlines, i+1, inset)
+            solution = inset_outlines(self.cfg, self.layer_height, self.outlines, i + 1, inset)
 
             if solution:
                 for path in solution:
@@ -101,7 +101,7 @@ class Layer:
     def create_infill(self):
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
-        solution = offset_outlines(self.cfg, self.layer_height, self.outlines, self.cfg.perimeters, inset)
+        solution = inset_outlines(self.cfg, self.layer_height, self.outlines, self.cfg.perimeters, inset)
         if solution:
             infill = line_infill(self.cfg, self.layer_no, solution)
 
@@ -177,23 +177,32 @@ class SlicedModel:
             lower_layer = self.layers[i - 1]
             current_layer = self.layers[i]
 
-            # Offset current and lower layer by number of perimeters
-            lower_layer_offset = offset_outlines(self.cfg, lower_layer.layer_height, lower_layer.outlines,
-                                                 self.cfg.perimeters, inset)
-            current_layer_offset = offset_outlines(self.cfg, current_layer.layer_height, current_layer.outlines,
-                                                   self.cfg.perimeters, inset)
-
-            if lower_layer_offset and current_layer_offset:
-                # Subtract current layer from lower layer
-                pc.AddPaths(current_layer_offset, pyclipper.PT_CLIP, True)
-                pc.AddPaths(lower_layer_offset, pyclipper.PT_SUBJECT, True)
+            # Inset lower layer by number of perimeters
+            lower_layer_inset = inset_outlines(self.cfg, lower_layer.layer_height, lower_layer.outlines,
+                                               self.cfg.perimeters, inset)
+            if lower_layer_inset:
+                # Subtract current layer from inset of lower layer
+                pc.AddPaths(current_layer.outlines, pyclipper.PT_CLIP, True)
+                pc.AddPaths(lower_layer_inset, pyclipper.PT_SUBJECT, True)
 
                 solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
                 if solution:
-                    infill = line_infill(self.cfg, lower_layer.layer_no, solution)
+                    # Offset result by number of perimeters so that next layer has something to sit on
+                    solution = inset_outlines(self.cfg, lower_layer.layer_height, solution,
+                                              -self.cfg.perimeters, -inset)
+                    if solution:
+                        pc.Clear()
 
-                    lower_layer.infill.extend(infill)
-                    lower_layer.node_count += 2 * len(infill)
+                        # Trim result
+                        pc.AddPaths(solution, pyclipper.PT_SUBJECT, True)
+                        pc.AddPaths(lower_layer_inset, pyclipper.PT_CLIP, True)
+
+                        solution = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+                        if solution:
+                            infill = line_infill(self.cfg, lower_layer.layer_no, solution)
+
+                            lower_layer.infill.extend(infill)
+                            lower_layer.node_count += 2 * len(infill)
 
             pc.Clear()
 
@@ -209,7 +218,7 @@ class SlicedModel:
         return result
 
 
-def offset_outlines(cfg, layer_height, outlines, nr_of_perimeters, inset):
+def inset_outlines(cfg, layer_height, outlines, nr_of_perimeters, inset):
     """
     Offsets the outline of this layer by the given number of perimeters
     and than subtract the result with the given inset. This ensures that
