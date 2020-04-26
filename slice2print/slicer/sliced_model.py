@@ -103,7 +103,7 @@ class Layer:
             else:
                 break  # Nothing more to do here
 
-    def create_infill(self):
+    def create_solid_infill(self):
         # Boundaries for infill
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
         solution = inset_outlines(self.cfg, self.layer_height, self.outlines, self.cfg.perimeters, inset)
@@ -163,11 +163,11 @@ class SlicedModel:
 
         if bottom_layers > 0:
             for layer in self.layers[:bottom_layers]:
-                layer.create_infill()
+                layer.create_solid_infill()
 
         if top_layers > 0:
             for layer in self.layers[-top_layers:]:
-                layer.create_infill()
+                layer.create_solid_infill()
 
         self.create_island_top_layers(bottom_layers, top_layers)
 
