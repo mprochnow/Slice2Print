@@ -28,9 +28,14 @@ class Layer:
     MIN_DIST_BETWEEN_POINTS = 50
 
     def __init__(self, cfg, contour, layer_no):
+        # List of [[x1, y1], [x2, y2], [x3, y3], ...] each defining an outline
         self.outlines = []
+        # List of lists of [[x1, y1], [x2, y2], [x3, y3], ...] each defining an perimeter
+        # First list is outer perimeter, second list is first inner perimeter and so on
         self.perimeters = []
+        # List of [[x1, y1], [x2, y2]] each defining an infill line
         self.infill = []
+
         self.cfg = cfg
         self.z = contour.z
         self.layer_no = layer_no
