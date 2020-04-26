@@ -173,7 +173,7 @@ class SlicedModel:
         inset = self.cfg.extrusion_width * self.cfg.infill_overlap / 100.0
 
         # Loop backwards through the layers
-        for i in range(len(self.layers)-1, 1, -1):
+        for i in reversed(range(self.cfg.bottom_layers, len(self.layers))):
             lower_layer = self.layers[i - 1]
             current_layer = self.layers[i]
 
@@ -186,23 +186,39 @@ class SlicedModel:
                 pc.AddPaths(lower_layer_inset, pyclipper.PT_SUBJECT, True)
 
                 solution = pc.Execute(pyclipper.CT_DIFFERENCE, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-                if solution:
+                if solution:   # Found an island
                     # Offset result by number of perimeters so that next layer has something to sit on
                     solution = inset_outlines(self.cfg, lower_layer.layer_height, solution,
                                               -self.cfg.perimeters, -inset)
-                    if solution:
-                        pc.Clear()
 
-                        # Trim result
-                        pc.AddPaths(solution, pyclipper.PT_SUBJECT, True)
-                        pc.AddPaths(lower_layer_inset, pyclipper.PT_CLIP, True)
+                    # Trim result
+                    pc.Clear()
+                    pc.AddPaths(solution, pyclipper.PT_SUBJECT, True)
+                    pc.AddPaths(lower_layer_inset, pyclipper.PT_CLIP, True)
 
-                        solution = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
-                        if solution:
-                            infill = line_infill(self.cfg, lower_layer.layer_no, solution)
+                    infill_boundary = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+                    if infill_boundary:
+                        infill = line_infill(self.cfg, lower_layer.layer_no, infill_boundary)
 
-                            lower_layer.infill.extend(infill)
-                            lower_layer.node_count += 2 * len(infill)
+                        lower_layer.infill.extend(infill)
+                        lower_layer.node_count += 2 * len(infill)
+
+                        for j in range(top_layers):
+                            if i - 1 - j <= self.cfg.bottom_layers:
+                                break
+
+                            layer = self.layers[i - 1 - j]
+
+                            pc.Clear()
+                            pc.AddPaths(infill_boundary, pyclipper.PT_SUBJECT, True)
+                            pc.AddPaths(layer.outlines, pyclipper.PT_CLIP, True)
+
+                            solution = pc.Execute(pyclipper.CT_INTERSECTION, pyclipper.PFT_EVENODD, pyclipper.PFT_EVENODD)
+                            if solution:
+                                infill = line_infill(self.cfg, layer.layer_no, infill_boundary)
+
+                                layer.infill.extend(infill)
+                                layer.node_count += 2 * len(infill)
 
             pc.Clear()
 
